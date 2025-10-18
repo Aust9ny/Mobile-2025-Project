@@ -3,10 +3,16 @@
     "name": "MyLibraryApp",
     "slug": "mylibraryapp",
     "version": "1.0.0",
-    "sdkVersion": "48.0.0",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "extra": {
       "appId": "mylibraryapp-default"
+    },
+    "android": {
+      "package": "com.anonymous.mylibraryapp"
     }
   }
 }

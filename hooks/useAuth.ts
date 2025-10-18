@@ -1,16 +1,10 @@
 // hooks/useAuth.ts
 import { useEffect, useState } from 'react';
-import { auth } from '../services/firebase';
-import {
-  onAuthStateChanged,
-  signInWithPhoneNumber,
-  RecaptchaVerifier,
-  signOut,
-  ConfirmationResult,
-  User
-} from 'firebase/auth';
+// import { auth } from '../services/firebase'; // ยังไม่ใช้งานตอนนี้
+import type { User, ConfirmationResult } from 'firebase/auth';
 
-// Custom hook to manage authentication via OTP (Phone Number)
+let auth: any; // ให้เป็น any ชั่วคราวก่อนใส่ firebase ของจริง
+
 export default function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -20,46 +14,38 @@ export default function useAuth() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Monitor user state
+  // Monitor user state (ถ้า auth ไม่มีค่า จะไม่ทำอะไร)
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    if (!auth || !auth.onAuthStateChanged) {
+      console.warn('Firebase auth ยังไม่ได้ initialize');
+      setIsAuthReady(true);
+      return;
+    }
+
+    const unsub = auth.onAuthStateChanged((user: User | null) => {
       setUser(user);
       setUserId(user ? user.uid : null);
       setIsAuthReady(true);
     });
+
     return unsub;
   }, []);
 
-  // Initialize reCAPTCHA for web (Expo Web or React Native Web only)
+  // Initialize reCAPTCHA (สำหรับ web)
   const initRecaptcha = () => {
     if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
-      // Invisible reCAPTCHA works well for Firebase phone auth
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        'recaptcha-container',
-        {
-          size: 'invisible',
-          callback: () => console.log('Recaptcha verified'),
-          'expired-callback': () => console.log('Recaptcha expired')
-        }
-      );
+      console.log('initRecaptcha() จะทำงานเมื่อใส่ Firebase จริง');
     }
   };
 
-  // Send OTP to phone number
   const sendOtp = async (phoneNumber: string) => {
     try {
       setLoading(true);
       setError(null);
       initRecaptcha();
-
-      const appVerifier = window.recaptchaVerifier;
-      const result = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      setConfirmation(result);
-      setVerificationId(result.verificationId);
+      console.log('sendOtp() จะทำงานเมื่อใส่ Firebase จริง');
       return true;
     } catch (err: any) {
-      console.error('OTP send error:', err);
       setError(err.message);
       return false;
     } finally {
@@ -67,17 +53,13 @@ export default function useAuth() {
     }
   };
 
-  // Confirm OTP
   const confirmOtp = async (code: string) => {
     try {
       if (!confirmation) throw new Error('No confirmation result available');
       setLoading(true);
-      const result = await confirmation.confirm(code);
-      setUser(result.user);
-      setUserId(result.user.uid);
+      console.log('confirmOtp() จะทำงานเมื่อใส่ Firebase จริง');
       return true;
     } catch (err: any) {
-      console.error('OTP verification failed:', err);
       setError(err.message);
       return false;
     } finally {
@@ -86,7 +68,13 @@ export default function useAuth() {
   };
 
   const logout = async () => {
-    await signOut(auth);
+    if (!auth || !auth.signOut) {
+      console.warn('Firebase auth ยังไม่ได้ initialize');
+      setUser(null);
+      setUserId(null);
+      return;
+    }
+    await auth.signOut();
     setUser(null);
     setUserId(null);
   };
@@ -100,6 +88,6 @@ export default function useAuth() {
     confirmOtp,
     logout,
     loading,
-    error
+    error,
   };
 }
