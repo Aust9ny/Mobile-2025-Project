@@ -1,119 +1,123 @@
-// // App.tsx
-// import React from 'react';
-// import { NavigationContainer } from '@react-navigation/native';
-// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-// import { createNativeStackNavigator } from '@react-navigation/native-stack';
-// import { SafeAreaView, StyleSheet, View, Text } from 'react-native';
-// import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// import useAuth from './hooks/useAuth';
-// import useShelfBooks from './hooks/useShelfBooks';
-// import SearchBar from './components/SearchBar';
-// import LibraryScreen from './screens/LibraryScreen';
-// import ShelfScreen from './screens/ShelfScreen';
-// import MenuScreen from './screens/MenuScreen';
-// import BookDetailScreen from './screens/BookDetailScreen';
-// import { SafeAreaProvider } from 'react-native-safe-area-context';
-// import SearchScreen from './screens/SearchScreen';
-// import { Pressable } from 'react-native';
-// import { useNavigation } from '@react-navigation/native';
+import React from 'react';
+import { SafeAreaView, View, Text, Image } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { NavigationContainer } from '@react-navigation/native';
+
+import useAuth from './hooks/useAuth';
+import useShelfBooks from './hooks/useShelfBooks';
+
+import LibraryScreenStack from './screens/LibraryScreen';
+import ShelfScreen from './screens/ShelfScreen';
+import MenuScreen from './screens/MenuScreen';
+import SearchScreen from './screens/SearchScreen';
+
+import libraryActive from './assets/hugeicons_bookshelf-03-color.png';
+import libraryInactive from './assets/hugeicons_bookshelf-03.png';
+import MyShelfInactive from './assets/hugeicons_book-open-02 (1).png';
+import MyShelfActive from './assets/hugeicons_book-open-02-color.png';
+import SearchInActive from './assets/iconamoon_search-light.png';
+import SearchActive from './assets/iconamoon_search-light-color.png';
+import MenuActive from './assets/charm_menu-hamburger-color.png';
+import MenuInactive from './assets/charm_menu-hamburger.png';
 
 
-// const Tab = createBottomTabNavigator();
-// const Stack = createNativeStackNavigator();
-
-
-// function LibraryStack({ userId, shelfBooks }: any) {
-//   return (
-//     <Stack.Navigator>
-//       <Stack.Screen
-//         name="LibraryHome"
-//         options={({ navigation }: any) => ({
-//           title: 'ห้องสมุด',
-//           headerStyle: { backgroundColor: '#115566' },
-//           headerTintColor: '#F8FCF8',
-//           headerRight: () => (
-//             <Pressable onPress={() => navigation.navigate('Search')} style={{ marginRight: 16 }}>
-//               <Text style={{ color: '#B0BA1D', fontWeight: '700' }}>ค้นหา</Text>
-//             </Pressable>
-//           )
-//         })}
-//       >
-//         {(props: any) => <LibraryScreen {...props} userId={userId} shelfBooks={shelfBooks} />}
-//       </Stack.Screen>
-
-//       <Stack.Screen
-//         name="BookDetail"
-//         component={BookDetailScreen}
-//         options={{ title: 'รายละเอียดหนังสือ', headerTintColor: '#F8FCF8', headerStyle: { backgroundColor: '#115566' } }}
-//       />
-
-//       <Stack.Screen
-//         name="Search"
-//         component={SearchScreen}
-//         options={{ headerShown: false }}
-//       />
-//     </Stack.Navigator>
-//   );
-// }
-
-
-
-// export default function App() {
-//   const { userId, isAuthReady } = useAuth();
-//   const { shelfBooks, isLoading } = useShelfBooks(userId, isAuthReady);
-//   const [searchTerm, setSearchTerm] = React.useState('');
-
-//   return (
-//     <GestureHandlerRootView style={{ flex: 1 }}>
-//       <SafeAreaProvider>
-//       <NavigationContainer>
-//         <SafeAreaView style={styles.safe}>
-//           <View style={styles.container}>
-//             <Tab.Navigator
-//               screenOptions={{
-//                 headerShown: false,
-//                 tabBarStyle: { height: 64, paddingBottom: 8 },
-//                 tabBarLabelStyle: { fontSize: 12, fontWeight: '700' }
-//               }}
-//             >
-//               <Tab.Screen name="Library">
-//                 {() => <LibraryStack userId={userId} shelfBooks={shelfBooks} />}
-//               </Tab.Screen>
-//               <Tab.Screen name="MyShelf">
-//                 {() => <ShelfScreen userId={userId} shelfBooks={shelfBooks} isLoading={isLoading} searchTerm={searchTerm} />}
-//               </Tab.Screen>
-//               <Tab.Screen name="Menu" component={MenuScreen} />
-//             </Tab.Navigator>
-//           </View>
-//           <View style={styles.userBox}>
-//             <Text style={{ fontSize: 11, color: '#666' }}>User ID: {userId ?? '—'}</Text>
-//           </View>
-//         </SafeAreaView>
-//       </NavigationContainer>
-//       </SafeAreaProvider>
-//     </GestureHandlerRootView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   safe: { flex: 1, backgroundColor: '#f7f7fb' },
-//   container: { flex: 1 },
-//   userBox: { position: 'absolute', left: 8, bottom: 72, backgroundColor: '#fff', padding: 6, borderRadius: 8, elevation: 2 }
-// });
-
-import React from "react";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import LoginScreen from "./screens/LoginScreen";
+const Tab = createBottomTabNavigator();
 
 export default function App() {
+  const { userId, isAuthReady, userProfile } = useAuth();
+  const { shelfBooks, isLoading } = useShelfBooks(userId, isAuthReady);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <LoginScreen />
+        <NavigationContainer>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
+            <Tab.Navigator
+              screenOptions={{
+                headerShown: false,
+                tabBarStyle: { height: 75, paddingBottom: 8 },
+                tabBarLabelStyle: { fontSize: 14, fontWeight: '700' },
+                tabBarActiveTintColor: '#115566',
+                tabBarInactiveTintColor: '#999999',
+              }}
+            >
+              <Tab.Screen
+                name="Library"
+                options={{
+                  tabBarLabel: 'ห้องสมุด',
+                  tabBarIcon: ({ focused }) => (
+                    <Image
+                      source={focused ? libraryActive : libraryInactive}
+                      style={{ width: 28, height: 28 }}
+                    />
+                  ),
+                }}
+              >
+                {() => (
+                  <LibraryScreenStack
+                    userId={userId}
+                    shelfBooks={shelfBooks}
+                    userProfile={userProfile}
+                  />
+                )}
+              </Tab.Screen>
+
+              <Tab.Screen
+                name="MyShelf"
+                options={{
+                  tabBarLabel: 'ชั้นหนังสือ',
+                  tabBarIcon: ({ focused }) => (
+                    <Image
+                      source={focused ? MyShelfActive : MyShelfInactive}
+                      style={{ width: 28, height: 28 }}
+                    />
+                  ),
+                }}
+              >
+                {() => (
+                  <ShelfScreen
+                    userId={userId}
+                    shelfBooks={shelfBooks}
+                    isLoading={isLoading}
+                  />
+                )}
+              </Tab.Screen>
+
+              <Tab.Screen
+                name="Search"
+                options={{
+                  tabBarLabel: 'ค้นหา',
+                  tabBarIcon: ({ focused }) => (
+                    <Image
+                      source={focused ? SearchActive : SearchInActive}
+                      style={{ width: 28, height: 28 }}
+                    />
+                  ),
+                }}
+              >
+                {() => <SearchScreen />}
+              </Tab.Screen>
+
+              <Tab.Screen
+                name="Menu"
+                options={{
+                  tabBarLabel: 'Menu',
+                  tabBarIcon: ({ focused }) => (
+                    <Image
+                      source={focused ? MenuActive : MenuInactive}
+                      style={{ width: 28, height: 28 }}
+                    />
+                  ),
+                }}
+                component={MenuScreen}
+              />
+            </Tab.Navigator>
+
+          </SafeAreaView>
+        </NavigationContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
-
-
