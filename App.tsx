@@ -22,7 +22,6 @@ import SearchActive from './assets/iconamoon_search-light-color.png';
 import MenuActive from './assets/charm_menu-hamburger-color.png';
 import MenuInactive from './assets/charm_menu-hamburger.png';
 
-
 const Tab = createBottomTabNavigator();
 
 export default function App() {
@@ -114,7 +113,6 @@ export default function App() {
                 component={MenuScreen}
               />
             </Tab.Navigator>
-
           </SafeAreaView>
         </NavigationContainer>
       </SafeAreaProvider>
