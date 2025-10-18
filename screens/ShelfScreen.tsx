@@ -114,7 +114,7 @@ export default function ShelfScreen({
       <View style={styles.customHeader}>
         {/* Title + Profile */}
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>ห้องสมุด</Text>
+          <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
           <Image
             source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
             style={styles.profileImage}
