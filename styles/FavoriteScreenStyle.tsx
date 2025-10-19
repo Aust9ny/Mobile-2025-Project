@@ -1,99 +1,91 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+const screenWidth = Dimensions.get('window').width;
 
-export const styles = StyleSheet.create({
-    customHeader: {
-        backgroundColor: '#115566',
-        width: '100%',
-        paddingHorizontal: 40,
-        paddingVertical: 40,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 30,
-        fontWeight: '800',
-        color: '#B0BA1D',
-    },
-    profileImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-    },
-    searchBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#D9D9D9',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginTop: 20,
-    },
-    searchIcon: {
-        width: 30,
-        height: 30,
-        marginRight: 8,
-    },
-    input: {
-        flex: 1,
-        fontSize: 16,
-        color: '#1E1E1E',
-    },
-    card: {
-        flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginBottom: 12,
-        padding: 10,
-        elevation: 2,
-        marginHorizontal: 16,
-        marginVertical: 16,
-    },
-    cover: {
-        width: 60,
-        height: 80,
-        borderRadius: 8,
-        backgroundColor: '#D9D9D9',
-    },
-    title: {
-        fontWeight: '700',
-        color: '#115566',
-        fontSize: 16,
-    },
-    author: {
-        color: '#386156',
-        marginTop: 2,
-    },
-    genre: {
-        color: '#669886',
-        fontSize: 12,
-        marginTop: 4,
-    },
-    empty: {
-        textAlign: 'center',
-        color: '#1E1E1E',
-        marginTop: 40,
-        fontSize: 16,
-    },
-    center: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 40,
-    },
-    emptyText: {
-        color: '#1E1E1E',
-        fontSize: 16,
-        fontWeight: '500',
-        marginVertical: 2,
-    },
-    emptyIcon: {
-        width: 80,
-        height: 80,
-        marginTop: 10,
-        tintColor: 'red',
-    },
+export const favoriteStyles = StyleSheet.create({
+  customHeader: {
+    backgroundColor: '#115566',
+    width: '100%',
+    paddingHorizontal: 40,
+    paddingVertical: 40,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#B0BA1D',
+  },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D9D9D9',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 20,
+  },
+  searchIcon: {
+    width: 30,
+    height: 30,
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1E1E1E',
+  },
 
+  // ---------- Grid Book Card ----------
+  genreBookCard: {
+    width: '31%',
+    marginBottom: 12,
+    marginRight: 8,
+  },
+  genreBookCover: {
+    width: '100%',
+    aspectRatio: 0.7,
+    borderRadius: 4,
+    backgroundColor: '#D9D9D9',
+  },
+  genreBookTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  genreBookAuthor: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // ---------- ไม่มีผลลัพธ์ ----------
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  emptyText: {
+    color: '#1E1E1E',
+    fontSize: 16,
+    fontWeight: '500',
+    marginVertical: 2,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    marginTop: 10,
+    tintColor: 'red',
+  },
 });
