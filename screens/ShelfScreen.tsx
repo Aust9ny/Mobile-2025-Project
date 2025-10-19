@@ -6,20 +6,19 @@ import {
   Pressable,
   ActivityIndicator,
   Image,
-  TextInput,
   SafeAreaView,
 } from 'react-native';
 import BookInteractionModal from '../components/BookInteractionModal';
 import LibraryService from '../services/LibraryService';
 import styles from '../styles/ShelfScreenStyle';
 import NoIcon from '../assets/healthicons_no.png';
-import SearchIcon from '../assets/iconamoon_search-light.png';
+import SearchBar from '../components/SearchBar';
 
 type Props = {
-  userId: string | null;
-  shelfBooks: any[];
-  isLoading: boolean;
-  searchTerm: string;
+  userId?: string | null;
+  shelfBooks?: any[];
+  isLoading?: boolean;
+  searchTerm?: string;
   userProfile?: { photoURL?: string };
 };
 
@@ -27,9 +26,9 @@ const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
 export default function ShelfScreen({
   userId,
-  shelfBooks,
-  isLoading,
-  searchTerm,
+  shelfBooks = [],
+  isLoading = false,
+  searchTerm = '',
   userProfile,
 }: Props) {
   const [active, setActive] = React.useState<any | null>(null);
@@ -69,16 +68,11 @@ export default function ShelfScreen({
     }
   };
 
-  // Render each shelf book
   const renderItem = ({ item }: { item: any }) => {
-    const daysLeft = Math.ceil(
-      ((item.dueDate ?? new Date()).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24)
-    );
+    const dueDate = item.dueDate ? new Date(item.dueDate) : new Date();
+    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     const isOverdue = daysLeft < 0;
-    const statusLabel = isOverdue
-      ? `OVERDUE by ${-daysLeft}d`
-      : `${daysLeft} days left`;
+    const statusLabel = isOverdue ? `OVERDUE by ${-daysLeft}d` : `${daysLeft} days left`;
 
     return (
       <Pressable
@@ -98,8 +92,8 @@ export default function ShelfScreen({
             isOverdue
               ? styles.statusOverdue
               : daysLeft < 3
-                ? styles.statusWarn
-                : styles.statusOk,
+              ? styles.statusWarn
+              : styles.statusOk,
           ]}
         >
           <Text style={styles.statusText}>{statusLabel}</Text>
@@ -110,9 +104,8 @@ export default function ShelfScreen({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
-      {/* Header + Search Bar */}
+      {/* Header + Search */}
       <View style={styles.customHeader}>
-        {/* Title + Profile */}
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
           <Image
@@ -121,21 +114,11 @@ export default function ShelfScreen({
           />
         </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchBarContainer}>
-          <Image
-            source={SearchIcon}
-            style={styles.searchIcon}
-            resizeMode="contain"
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="ชื่อหนังสือ หรือชื่อผู้แต่ง"
-            placeholderTextColor="#386156"
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-        </View>
+        <SearchBar
+          value={searchText}
+          onChange={setSearchText}
+          placeholder="ชื่อหนังสือ หรือชื่อผู้แต่ง"
+        />
       </View>
 
       {/* Content */}
@@ -152,7 +135,7 @@ export default function ShelfScreen({
       ) : (
         <>
           <Text style={styles.sectionTitle}>
-            Your Borrowed Books ({filtered.length})
+            Your Borrowed Books ({filtered?.length ?? 0})
           </Text>
           <Text style={styles.tip}>Long-press a book to return or extend.</Text>
 
@@ -166,7 +149,6 @@ export default function ShelfScreen({
         </>
       )}
 
-      {/* Modal */}
       <BookInteractionModal
         visible={modalVisible}
         book={active}
