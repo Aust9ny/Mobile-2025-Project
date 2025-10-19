@@ -1,6 +1,8 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+const screenWidth = Dimensions.get('window').width;
 
 export const styles = StyleSheet.create({
+  // ---------- Header ----------
   customHeader: {
     backgroundColor: '#115566',
     width: '100%',
@@ -41,36 +43,64 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1E1E1E',
   },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 12,
-    padding: 10,
-    elevation: 2,
-    marginHorizontal: 16,
-    marginVertical: 16,
-  },
-  cover: {
-    width: 60,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#D9D9D9',
-  },
-  title: {
-    fontWeight: '700',
+
+  // ---------- ผลการค้นหา ----------
+  searchResultHeader: {
     color: '#115566',
-    fontSize: 16,
+    fontSize: 30,
+    fontWeight: '800',
+    marginLeft: 16,
+    marginTop: 24,
+    marginBottom: 16,
   },
-  author: {
-    color: '#386156',
-    marginTop: 2,
+
+  // ---------- หนังสือเล่มแรกใหญ่ ----------
+  searchFirstBookContainer: {
+    marginBottom: 24,
+    paddingLeft: 16, // ชิดซ้าย
   },
-  genre: {
-    color: '#669886',
-    fontSize: 12,
+  searchFirstBookCover: {
+    width: screenWidth * 0.65, // เกือบเต็มหน้าจอด้านซ้าย
+    height: screenWidth * 0.95, // ความสูงตาม aspect ratio ปก
+  },
+  searchFirstBookTitle: {
+    color: '#1E1E1E',
+    fontSize: 22,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  searchFirstBookAuthor: {
+    color: '#666666',
+    fontSize: 14,
     marginTop: 4,
   },
+
+  // ---------- Grid Book Card (เหมือนหมวดหมู่) ----------
+  genreBookCard: {
+    width: '31%',
+    marginBottom: 12,
+    marginRight: 8,
+  },
+  genreBookCover: {
+    width: '100%',
+    aspectRatio: 0.7,
+    borderRadius: 4,
+  },
+  genreBookTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  genreBookAuthor: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // ---------- ไม่มีผลลัพธ์ ----------
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -89,5 +119,4 @@ export const styles = StyleSheet.create({
     marginTop: 10,
     tintColor: 'red',
   },
-
 });
