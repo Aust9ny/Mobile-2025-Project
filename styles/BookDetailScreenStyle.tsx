@@ -4,7 +4,8 @@ import { StyleSheet } from 'react-native';
 export default StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#f7f7fb',
+        padding: 12,
     },
 
     genre: {
@@ -16,11 +17,11 @@ export default StyleSheet.create({
     },
 
     cover: {
-        width: 250,           
-        height: 400,         
+        width: 250,
+        height: 400,
         resizeMode: 'cover',
-        backgroundColor: '#fff', 
-        alignSelf: 'center',    
+        backgroundColor: '#fff',
+        alignSelf: 'center',
         marginVertical: 16,
     },
 

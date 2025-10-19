@@ -72,7 +72,7 @@ export const styles = StyleSheet.create({
     marginTop: 4,
   },
   status: {
-    color: 'red',
+    color: '#666666',
     fontWeight: '600',
     marginTop: 6,
   },

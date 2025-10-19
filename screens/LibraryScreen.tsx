@@ -29,19 +29,39 @@ const screenWidth = Dimensions.get('window').width;
 const cardWidth = (screenWidth - 48) / 3;
 
 const MOCK_LIBRARY: Book[] = [
-  { id: '1', title: 'มติชน', author: 'Matichon Staff', genre: 'หนังสือพิมพ์', cover: 'https://upload.wikimedia.org/wikipedia/th/5/50/Matichon_Logo.png' },
-  { id: '2', title: 'ข่าวรายวัน', author: 'Author C', genre: 'หนังสือพิมพ์', cover: 'https://picsum.photos/200/300?random=101' },
-  { id: '3', title: 'ไทยรัฐ', author: 'Thai Rath', genre: 'หนังสือพิมพ์', cover: 'https://picsum.photos/200/300?random=103' },
-  { id: '4', title: 'ชีวจิต', author: 'ชีวจิตทีม', genre: 'นิตยสารสุขภาพ', cover: 'https://upload.wikimedia.org/wikipedia/th/3/36/Chivajit_magazine_cover.jpg' },
-  { id: '5', title: 'Yoga & Health', author: 'Author E', genre: 'นิตยสารสุขภาพ', cover: 'https://picsum.photos/200/300?random=102' },
-  { id: '6', title: 'Wellness Today', author: 'Health Team', genre: 'นิตยสารสุขภาพ', cover: 'https://picsum.photos/200/300?random=104' },
-  { id: '7', title: 'The Silent Code', author: 'Aria Thorne', genre: 'นิยาย', cover: 'https://picsum.photos/200/300?random=1' },
-  { id: '8', title: 'นิทานเด็ก', author: 'Author A', genre: 'นิยาย', cover: 'https://picsum.photos/200/300?random=2' },
-  { id: '9', title: 'Magic Forest', author: 'Author B', genre: 'นิยาย', cover: 'https://picsum.photos/200/300?random=3' },
-  { id: '10', title: 'Science World', author: 'Sci Team', genre: 'นิตยสารวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=105' },
-  { id: '11', title: 'Tech Today', author: 'Tech Team', genre: 'นิตยสารวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=106' },
-  { id: '12', title: 'Future Tech', author: 'Tech Author', genre: 'นิตยสารวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=107' },
+  { id: '1', title: 'มติชน', author: 'Matichon Staff', genre: 'หนังสือพิมพ์', cover: 'https://upload.wikimedia.org/wikipedia/th/5/50/Matichon_Logo.png', available: 5, borrowed: 10, total: 15 },
+  { id: '2', title: 'ข่าวรายวัน', author: 'Author C', genre: 'หนังสือพิมพ์', cover: 'https://picsum.photos/200/300?random=101', available: 3, borrowed: 7, total: 10 },
+  { id: '3', title: 'ไทยรัฐ', author: 'Thai Rath', genre: 'หนังสือพิมพ์', cover: 'https://picsum.photos/200/300?random=103', available: 2, borrowed: 8, total: 10 },
+  { id: '4', title: 'ชีวจิต', author: 'ชีวจิตทีม', genre: 'นิตยสารสุขภาพ', cover: 'https://upload.wikimedia.org/wikipedia/th/3/36/Chivajit_magazine_cover.jpg', available: 4, borrowed: 6, total: 10 },
+  { id: '5', title: 'Yoga & Health', author: 'Author E', genre: 'นิตยสารสุขภาพ', cover: 'https://picsum.photos/200/300?random=102', available: 6, borrowed: 4, total: 10 },
+  { id: '6', title: 'Wellness Today', author: 'Health Team', genre: 'นิตยสารสุขภาพ', cover: 'https://picsum.photos/200/300?random=104', available: 8, borrowed: 2, total: 10 },
+  { id: '7', title: 'The Silent Code', author: 'Aria Thorne', genre: 'นิยาย', cover: 'https://picsum.photos/200/300?random=1', available: 3, borrowed: 12, total: 15 },
+  { id: '8', title: 'นิทานเด็ก', author: 'Author A', genre: 'นิยาย', cover: 'https://picsum.photos/200/300?random=2', available: 7, borrowed: 3, total: 10 },
+  { id: '9', title: 'Magic Forest', author: 'Author B', genre: 'นิยาย', cover: 'https://picsum.photos/200/300?random=3', available: 5, borrowed: 5, total: 10 },
+  { id: '10', title: 'Science World', author: 'Sci Team', genre: 'นิตยสารวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=105', available: 4, borrowed: 6, total: 10 },
+  { id: '11', title: 'Tech Today', author: 'Tech Team', genre: 'นิตยสารวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=106', available: 6, borrowed: 4, total: 10 },
+  { id: '12', title: 'Future Tech', author: 'Tech Author', genre: 'นิตยสารวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=107', available: 9, borrowed: 1, total: 10 },
+  { id: '13', title: 'Nature Wonders', author: 'Eco Writer', genre: 'สารคดีธรรมชาติ', cover: 'https://picsum.photos/200/300?random=108', available: 3, borrowed: 7, total: 10 },
+  { id: '14', title: 'สัตว์โลกน่ารู้', author: 'Wildlife Group', genre: 'สารคดีธรรมชาติ', cover: 'https://picsum.photos/200/300?random=109', available: 6, borrowed: 4, total: 10 },
+  { id: '15', title: 'โลกวิทยาศาสตร์', author: 'Science Thai', genre: 'นิตยสารวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=110', available: 5, borrowed: 5, total: 10 },
+  { id: '16', title: 'Digital Future', author: 'Tech Hub', genre: 'นิตยสารเทคโนโลยี', cover: 'https://picsum.photos/200/300?random=111', available: 7, borrowed: 3, total: 10 },
+  { id: '17', title: 'AI Revolution', author: 'AI Team', genre: 'นิตยสารเทคโนโลยี', cover: 'https://picsum.photos/200/300?random=112', available: 4, borrowed: 6, total: 10 },
+  { id: '18', title: 'ชีวิตสีเขียว', author: 'Eco Mind', genre: 'นิตยสารสุขภาพ', cover: 'https://picsum.photos/200/300?random=113', available: 8, borrowed: 2, total: 10 },
+  { id: '19', title: 'Mindful Living', author: 'Zen Writer', genre: 'นิตยสารสุขภาพ', cover: 'https://picsum.photos/200/300?random=114', available: 6, borrowed: 4, total: 10 },
+  { id: '20', title: 'The Hidden Truth', author: 'Mystery Pen', genre: 'นิยายสืบสวน', cover: 'https://picsum.photos/200/300?random=115', available: 2, borrowed: 8, total: 10 },
+  { id: '21', title: 'Detective Mind', author: 'S. Holmes', genre: 'นิยายสืบสวน', cover: 'https://picsum.photos/200/300?random=116', available: 5, borrowed: 5, total: 10 },
+  { id: '22', title: 'Quantum Realm', author: 'Dr. Q', genre: 'นิยายวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=117', available: 4, borrowed: 6, total: 10 },
+  { id: '23', title: 'Time Traveler', author: 'Future Man', genre: 'นิยายวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=118', available: 6, borrowed: 4, total: 10 },
+  { id: '24', title: 'ดาวเคราะห์ลึกลับ', author: 'Space Thai', genre: 'นิยายวิทยาศาสตร์', cover: 'https://picsum.photos/200/300?random=119', available: 8, borrowed: 2, total: 10 },
+  { id: '25', title: 'Cooking Daily', author: 'Chef Dee', genre: 'นิตยสารอาหาร', cover: 'https://picsum.photos/200/300?random=120', available: 7, borrowed: 3, total: 10 },
+  { id: '26', title: 'สูตรลับครัวไทย', author: 'แม่ช้อย', genre: 'นิตยสารอาหาร', cover: 'https://picsum.photos/200/300?random=121', available: 5, borrowed: 5, total: 10 },
+  { id: '27', title: 'Dessert World', author: 'Chef Ploy', genre: 'นิตยสารอาหาร', cover: 'https://picsum.photos/200/300?random=122', available: 9, borrowed: 1, total: 10 },
+  { id: '28', title: 'Smart Money', author: 'Finance Pro', genre: 'นิตยสารธุรกิจ', cover: 'https://picsum.photos/200/300?random=123', available: 6, borrowed: 4, total: 10 },
+  { id: '29', title: 'ลงทุนง่ายๆ', author: 'Investor Thai', genre: 'นิตยสารธุรกิจ', cover: 'https://picsum.photos/200/300?random=124', available: 3, borrowed: 7, total: 10 },
+  { id: '30', title: 'Business Weekly', author: 'Biz Team', genre: 'นิตยสารธุรกิจ', cover: 'https://picsum.photos/200/300?random=125', available: 8, borrowed: 2, total: 10 },
 ];
+
+
 
 const Stack = createNativeStackNavigator();
 
@@ -109,9 +129,12 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
           </Pressable>
         </View>
 
-        {activeTab === 'Home' ? (
+        {/* ------------------------------ */}
+        {/* หน้าแรก (Home) */}
+        {/* ------------------------------ */}
+        {activeTab === 'Home' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            {books.slice(0, 2).map((book) => ( // เลือกแค่ 2 เล่มแรก
+            {books.slice(0, 2).map((book) => ( // แสดง 2 เล่มแรกเฉพาะหน้าแรก
               <Pressable
                 key={book.id}
                 onPress={() => navigation.navigate('BookDetail', { book })}
@@ -126,13 +149,31 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
               </Pressable>
             ))}
           </View>
-        ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            {books.map((book) => (
+        )}
+
+        {/* ------------------------------ */}
+        {/* หมวดหมู่ (Categories) */}
+        {/* ------------------------------ */}
+        {activeTab === 'Categories' && (
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-start', // ✅ เปลี่ยนจาก space-between
+            }}
+          >
+            {books.slice(0, 3).map((book, index) => (
               <Pressable
                 key={book.id}
                 onPress={() => navigation.navigate('BookDetail', { book })}
-                style={[styles.genreBookCard, { width: cardWidth }]}
+                style={[
+                  styles.genreBookCard,
+                  {
+                    width: cardWidth,
+                    marginRight: (index + 1) % 3 === 0 ? 0 : 8, // ✅ เว้นระยะห่าง 8px เฉพาะก่อนครบ 3 คอลัมน์
+                    marginBottom: 12, // เพิ่มช่องว่างระหว่างแถว
+                  },
+                ]}
               >
                 <Image source={{ uri: book.cover }} style={styles.genreBookCover} />
                 <Text style={styles.genreBookTitle}>{book.title}</Text>
@@ -141,9 +182,11 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
             ))}
           </View>
         )}
+
       </View>
     );
   };
+
 
 
   return (

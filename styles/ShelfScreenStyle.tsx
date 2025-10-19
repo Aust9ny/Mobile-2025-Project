@@ -1,4 +1,7 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const screenWidth = Dimensions.get('window').width;
+export const cardWidth = (screenWidth - 32) / 3; // 3 cards per row + margin
 
 export default StyleSheet.create({
   customHeader: {
@@ -26,25 +29,6 @@ export default StyleSheet.create({
     borderRadius: 25,
   },
 
-  // ❌ ลบ searchBarContainer, searchIcon, searchInput ออก
-
-  section: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#f7f7fb',
-  },
-
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#222',
-    marginBottom: 8,
-  },
-  tip: {
-    color: '#5b5b8a',
-    marginBottom: 12,
-  },
-
   center: {
     flex: 1,
     alignItems: 'center',
@@ -62,40 +46,62 @@ export default StyleSheet.create({
     textAlign: 'center',
   },
 
-  shelfItem: {
-    flexDirection: 'row',
+  // ---------- Book Card for ShelfScreen ----------
+  genreBookCard: {
+    width: cardWidth,
+    margin: 4,
     backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 10,
+    borderRadius: 8,
+    paddingBottom: 8,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
   },
-  shelfTitle: {
-    fontWeight: '700',
-    fontSize: 16,
+  genreBookCover: {
+    width: '100%',
+    height: cardWidth * 1.4,
+    marginVertical: 20
   },
-  shelfAuthor: {
-    color: '#666',
-    fontSize: 12,
+  genreBookTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E1E1E',
     marginTop: 4,
+    textAlign: 'center',
+  },
+  genreBookAuthor: {
+    fontSize: 12,
+    color: 'gray',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  borrowDateText: {
+    fontSize: 12,
+    color: 'gray',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  borrowStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
   },
 
-  statusPill: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+  // ---------- Other ----------
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#222',
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  statusOk: {
-    backgroundColor: '#10b981',
-  },
-  statusWarn: {
-    backgroundColor: '#f59e0b',
-  },
-  statusOverdue: {
-    backgroundColor: '#ef4444',
-  },
-  statusText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 12,
+  tip: {
+    color: '#5b5b8a',
+    marginBottom: 12,
+    marginLeft: 4,
   },
 });

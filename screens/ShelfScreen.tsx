@@ -1,111 +1,150 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
   FlatList,
   Pressable,
-  ActivityIndicator,
   Image,
-  SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import BookInteractionModal from '../components/BookInteractionModal';
-import LibraryService from '../services/LibraryService';
-import styles from '../styles/ShelfScreenStyle';
-import NoIcon from '../assets/healthicons_no.png';
 import SearchBar from '../components/SearchBar';
+import NoIcon from '../assets/healthicons_no.png';
+import styles, { cardWidth } from '../styles/ShelfScreenStyle';
 
 type Props = {
-  userId?: string | null;
-  shelfBooks?: any[];
-  isLoading?: boolean;
-  searchTerm?: string;
   userProfile?: { photoURL?: string };
+  isLoading?: boolean;
 };
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
-export default function ShelfScreen({
-  userId,
-  shelfBooks = [],
-  isLoading = false,
-  searchTerm = '',
-  userProfile,
-}: Props) {
-  const [active, setActive] = React.useState<any | null>(null);
-  const [modalVisible, setModalVisible] = React.useState(false);
-  const [searchText, setSearchText] = React.useState(searchTerm || '');
+export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
+  const insets = useSafeAreaInsets();
+  const [borrowHistory, setBorrowHistory] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState('');
+  const [active, setActive] = useState<any | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // โหลด borrowHistory
+  const loadBorrowHistory = async () => {
+    try {
+      const storedHistory = await AsyncStorage.getItem('borrowHistory');
+      const history = storedHistory ? JSON.parse(storedHistory) : [];
+      setBorrowHistory(history);
+    } catch (e) {
+      console.error('Error loading borrow history:', e);
+    }
+  };
+
+  // โหลดทุกครั้งที่หน้าถูก focus
+  useFocusEffect(
+    useCallback(() => {
+      loadBorrowHistory();
+    }, [])
+  );
+
+  // ฟังก์ชันเช็คว่ายืมต่อได้หรือไม่
+  const canExtend = (book: any) => {
+    const dueDate = new Date(book.dueDate);
+    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return daysLeft <= 3 && !book.extended;
+  };
+
+  // คืนหนังสือ
+  const handleReturn = async (id: string) => {
+    try {
+      const updatedHistory = borrowHistory.filter((b) => b.id !== id);
+      await AsyncStorage.setItem('borrowHistory', JSON.stringify(updatedHistory));
+      setBorrowHistory(updatedHistory);
+      setModalVisible(false);
+    } catch (e) {
+      alert('Return failed.');
+    }
+  };
+
+  // ยืมต่อหนังสือ
+  const handleExtend = async (id: string) => {
+    try {
+      const updatedHistory = borrowHistory.map((b) => {
+        if (b.id === id) {
+          if (!canExtend(b)) {
+            alert('ไม่สามารถยืมต่อได้แล้ว');
+            return b;
+          }
+          const newDueDate = new Date(b.dueDate);
+          newDueDate.setDate(newDueDate.getDate() + 7);
+          return { ...b, dueDate: newDueDate.toISOString(), extended: true };
+        }
+        return b;
+      });
+      await AsyncStorage.setItem('borrowHistory', JSON.stringify(updatedHistory));
+      setBorrowHistory(updatedHistory);
+      setModalVisible(false);
+    } catch (e) {
+      alert('ยืมต่อไม่สำเร็จ');
+    }
+  };
 
   // Filter books by search text
   const filtered = useMemo(() => {
-    if (!searchText) return shelfBooks;
+    if (!searchText) return borrowHistory;
     const s = searchText.toLowerCase();
-    return shelfBooks.filter(
-      b =>
+    return borrowHistory.filter(
+      (b) =>
         (b.title ?? '').toLowerCase().includes(s) ||
         (b.author ?? '').toLowerCase().includes(s)
     );
-  }, [shelfBooks, searchText]);
+  }, [borrowHistory, searchText]);
 
-  const handleReturn = async (id: string) => {
-    if (!userId) return;
-    try {
-      await LibraryService.returnBook(userId, id);
-    } catch (e) {
-      alert('Return failed.');
-    } finally {
-      setModalVisible(false);
-    }
-  };
-
-  const handleExtend = async (id: string) => {
-    if (!userId) return;
-    try {
-      await LibraryService.extendLoan(userId, id, 7);
-    } catch (e) {
-      alert('Extend failed.');
-    } finally {
-      setModalVisible(false);
-    }
-  };
-
+  // Render การ์ดหนังสือ
   const renderItem = ({ item }: { item: any }) => {
-    const dueDate = item.dueDate ? new Date(item.dueDate) : new Date();
+    const borrowDate = new Date(item.borrowDate);
+    const dueDate = new Date(item.dueDate);
     const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     const isOverdue = daysLeft < 0;
-    const statusLabel = isOverdue ? `OVERDUE by ${-daysLeft}d` : `${daysLeft} days left`;
 
     return (
       <Pressable
-        onLongPress={() => {
+        onPress={() => {
           setActive(item);
           setModalVisible(true);
         }}
-        style={styles.shelfItem}
+        style={{ width: cardWidth, margin: 4 }}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={styles.shelfTitle}>{item.title}</Text>
-          <Text style={styles.shelfAuthor}>by {item.author}</Text>
-        </View>
-        <View
-          style={[
-            styles.statusPill,
-            isOverdue
-              ? styles.statusOverdue
-              : daysLeft < 3
-              ? styles.statusWarn
-              : styles.statusOk,
-          ]}
+        <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
+        <Text style={styles.genreBookTitle}>{item.title}</Text>
+        <Text style={styles.genreBookAuthor}>{item.author}</Text>
+
+        <Text style={{ fontSize: 12, color: 'gray', marginTop: 2 }}>
+          ยืมวันที่: {borrowDate.toLocaleDateString()}
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            color: isOverdue ? 'red' : 'green',
+            marginTop: 2,
+            fontWeight: '600',
+          }}
         >
-          <Text style={styles.statusText}>{statusLabel}</Text>
-        </View>
+          {isOverdue ? 'สิ้นสุดการยืม' : `เหลือเวลาอีก ${daysLeft} วัน`}
+        </Text>
+        {canExtend(item) && !isOverdue && (
+          <Text style={{ fontSize: 12, color: 'blue', marginTop: 2 }}>
+            สามารถยืมต่อได้
+          </Text>
+        )}
       </Pressable>
     );
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
-      {/* Header + Search */}
-      <View style={styles.customHeader}>
+    <View style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
+      {/* Header */}
+      <View style={[styles.customHeader, { paddingTop: insets.top }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
           <Image
@@ -129,33 +168,29 @@ export default function ShelfScreen({
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>ขออภัย</Text>
-          <Text style={styles.emptyText}>ท่านยังไม่มีหนังสือในชั้นหนังสือ</Text>
+          <Text style={styles.emptyText}>ท่านยังไม่มีหนังสือที่ยืม</Text>
           <Image source={NoIcon} style={[styles.emptyIcon, { tintColor: 'red' }]} />
         </View>
       ) : (
-        <>
-          <Text style={styles.sectionTitle}>
-            Your Borrowed Books ({filtered?.length ?? 0})
-          </Text>
-          <Text style={styles.tip}>Long-press a book to return or extend.</Text>
-
-          <FlatList
-            data={filtered}
-            keyExtractor={i => i.id}
-            renderItem={renderItem}
-            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-            contentContainerStyle={{ paddingBottom: 120 }}
-          />
-        </>
+        <FlatList
+          data={filtered}
+          keyExtractor={(i) => i.id}
+          renderItem={renderItem}
+          numColumns={3}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 4 }}
+        />
       )}
 
+      {/* Modal */}
       <BookInteractionModal
         visible={modalVisible}
         book={active}
         onClose={() => setModalVisible(false)}
         onReturn={handleReturn}
         onExtend={handleExtend}
+        canExtend={active ? canExtend(active) : false}
       />
-    </SafeAreaView>
+    </View>
   );
 }

@@ -58,7 +58,7 @@ export default function DrawerMenu({ visible, onClose, userProfile }: Props) {
           </Pressable>
 
           <Pressable style={styles.menuItem} onPress={() => handleNavigate('HistoryScreen')}>
-            <Text style={styles.menuText}>ประวัติการอ่าน</Text>
+            <Text style={styles.menuText}>ประวัติการเข้าชม</Text>
             <Image source={HistoryIcon} />
           </Pressable>
         </ScrollView>
