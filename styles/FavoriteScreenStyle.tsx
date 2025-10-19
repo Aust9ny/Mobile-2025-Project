@@ -52,8 +52,6 @@ export const favoriteStyles = StyleSheet.create({
   genreBookCover: {
     width: '100%',
     aspectRatio: 0.7,
-    borderRadius: 4,
-    backgroundColor: '#D9D9D9',
   },
   genreBookTitle: {
     fontSize: 14,

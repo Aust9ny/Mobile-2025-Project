@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, FlatList, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  Dimensions,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +16,7 @@ import SearchIcon from '../assets/iconamoon_search-light.png';
 import NoIcon from '../assets/healthicons_no.png';
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+const screenWidth = Dimensions.get('window').width;
 
 export default function HistoryScreen({ userProfile }: { userProfile?: { photoURL?: string } }) {
   const navigation = useNavigation<any>();
@@ -28,22 +37,38 @@ export default function HistoryScreen({ userProfile }: { userProfile?: { photoUR
     item.title.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.card}>
+  const renderGridItem = ({ item, index }: { item: any; index: number }) => (
+    <TouchableOpacity
+      style={[
+        styles.card,
+        { width: screenWidth / 3 - 20, marginRight: (index + 1) % 3 === 0 ? 0 : 8 },
+      ]}
+      onPress={() => navigation.navigate('BookDetail', { book: item })}
+    >
       <Image source={{ uri: item.cover }} style={styles.cover} />
-      <View style={{ flex: 1, marginLeft: 10 }}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.author}>{item.author}</Text>
-        <Text style={styles.genre}>{item.genre}</Text>
-        <Text style={styles.status}>
-          เข้าชมเมื่อ {new Date(item.viewedAt).toLocaleDateString()}
-        </Text>
-      </View>
-    </View>
+      <Text style={styles.title} numberOfLines={1}>
+        {item.title}
+      </Text>
+      <Text style={styles.author} numberOfLines={1}>
+        {item.author}
+      </Text>
+      <Text style={styles.status} numberOfLines={1}>
+        {item.viewedAt
+          ? new Date(item.viewedAt).toLocaleString('th-TH', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : ''}
+      </Text>
+    </TouchableOpacity>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FCF8' }}>
+      {/* Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ประวัติการเข้าชม</Text>
@@ -53,6 +78,7 @@ export default function HistoryScreen({ userProfile }: { userProfile?: { photoUR
           />
         </View>
 
+        {/* Search Bar */}
         <View style={styles.searchBar}>
           <Image source={SearchIcon} style={styles.searchIcon} resizeMode="contain" />
           <TextInput
@@ -65,11 +91,14 @@ export default function HistoryScreen({ userProfile }: { userProfile?: { photoUR
         </View>
       </View>
 
+      {/* Grid Books */}
       {filteredHistory.length > 0 ? (
         <FlatList
           data={filteredHistory}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={renderItem}
+          numColumns={3}
+          renderItem={renderGridItem}
+          columnWrapperStyle={{ paddingHorizontal: 8, marginTop: 16 }}
           contentContainerStyle={{ paddingBottom: 100 }}
         />
       ) : (

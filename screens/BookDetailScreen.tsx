@@ -1,3 +1,4 @@
+// screens/BookDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -19,17 +20,46 @@ export default function BookDetailScreen({ route, navigation }: any) {
 
   const [isFavorite, setIsFavorite] = useState(false);
 
-  // โหลดสถานะ favorite จาก AsyncStorage
+  // 🔹 โหลดสถานะ Favorite ตอนเปิดหน้าหนังสือ
   useEffect(() => {
-    const checkFavorite = async () => {
-      const stored = await AsyncStorage.getItem('favoriteBooks');
-      const favorites = stored ? JSON.parse(stored) : [];
-      const found = favorites.some((b: any) => b.id === book.id);
-      setIsFavorite(found);
+    const loadFavoriteStatus = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('favoriteBooks');
+        const favorites = stored ? JSON.parse(stored) : [];
+        const exists = favorites.some((b: any) => b.id === book.id);
+        setIsFavorite(exists);
+      } catch (error) {
+        console.error('Error loading favorite status:', error);
+      }
     };
-    checkFavorite();
+
+    loadFavoriteStatus();
   }, [book]);
 
+  // 🔹 บันทึกประวัติการเข้าชม
+  useEffect(() => {
+    const addToHistory = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('viewHistory');
+        const history = stored ? JSON.parse(stored) : [];
+
+        const existingIndex = history.findIndex((b: any) => b.id === book.id);
+        if (existingIndex >= 0) {
+          history[existingIndex].viewedAt = new Date().toISOString();
+        } else {
+          history.push({ ...book, viewedAt: new Date().toISOString() });
+        }
+
+        await AsyncStorage.setItem('viewHistory', JSON.stringify(history));
+      } catch (error) {
+        console.error('Error saving view history:', error);
+      }
+    };
+
+    addToHistory();
+  }, [book]);
+
+  // 🔹 สลับสถานะ Favorite
   const toggleFavorite = async () => {
     try {
       const stored = await AsyncStorage.getItem('favoriteBooks');
@@ -37,16 +67,14 @@ export default function BookDetailScreen({ route, navigation }: any) {
 
       let updatedFavorites;
       if (isFavorite) {
-        // ลบออกจากรายการโปรด
         updatedFavorites = favorites.filter((b: any) => b.id !== book.id);
       } else {
-        // เพิ่มเข้าไป
         updatedFavorites = [...favorites, book];
       }
 
       await AsyncStorage.setItem('favoriteBooks', JSON.stringify(updatedFavorites));
-
       setIsFavorite((prev) => !prev);
+
       Alert.alert(
         'รายการโปรด',
         isFavorite ? 'ลบออกจากรายการโปรดแล้ว' : 'เพิ่มลงในรายการโปรดแล้ว'
@@ -56,9 +84,11 @@ export default function BookDetailScreen({ route, navigation }: any) {
     }
   };
 
-  const handleBorrow = () => {
+  // 🔹 กดปุ่มยืม
+  const handleBorrow = async () => {
+    const borrowDate = new Date();
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 7);
+    dueDate.setDate(borrowDate.getDate() + 7);
 
     const thaiMonths = [
       'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
@@ -78,9 +108,35 @@ export default function BookDetailScreen({ route, navigation }: any) {
         { text: 'ยกเลิก', style: 'destructive' },
         {
           text: 'ตกลง',
-          onPress: () => {
-            Alert.alert('สำเร็จ', 'คุณได้ยืมหนังสือเรียบร้อยแล้ว!');
-            navigation.goBack();
+          onPress: async () => {
+            try {
+              // 🔹 บันทึกเข้าชั้นหนังสือ
+              const storedShelf = await AsyncStorage.getItem('bookshelf');
+              const shelf = storedShelf ? JSON.parse(storedShelf) : [];
+              if (!shelf.some((b: any) => b.id === book.id)) {
+                shelf.push(book);
+                await AsyncStorage.setItem('bookshelf', JSON.stringify(shelf));
+              }
+
+              // 🔹 บันทึก borrowHistory
+              const storedHistory = await AsyncStorage.getItem('borrowHistory');
+              const history = storedHistory ? JSON.parse(storedHistory) : [];
+
+              const newBorrow = {
+                ...book,
+                borrowDate: borrowDate.toISOString(),
+                dueDate: dueDate.toISOString(),
+                extended: false,
+              };
+
+              history.push(newBorrow);
+              await AsyncStorage.setItem('borrowHistory', JSON.stringify(history));
+
+              Alert.alert('สำเร็จ', 'คุณได้ยืมหนังสือเรียบร้อยแล้ว!');
+              navigation.goBack();
+            } catch (error) {
+              console.error('Error borrowing book:', error);
+            }
           },
         },
       ],
