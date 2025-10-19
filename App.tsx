@@ -11,6 +11,11 @@ import useShelfBooks from './hooks/useShelfBooks';
 import LibraryScreenStack from './screens/LibraryScreen';
 import ShelfScreen from './screens/ShelfScreen';
 import SearchScreen from './screens/SearchScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import ContactScreen from './screens/ContactScreen';
+import FavoriteScreen from './screens/FavoriteScreen';
+import HistoryScreen from './screens/HistoryScreen';
+
 import DrawerMenu from './components/DrawerMenu';
 
 import libraryActive from './assets/hugeicons_bookshelf-03-color.png';
@@ -28,19 +33,34 @@ type DrawerContextType = {
   drawerVisible: boolean;
 };
 const DrawerContext = createContext<DrawerContextType>({
-  toggleDrawer: () => {},
+  toggleDrawer: () => { },
   drawerVisible: false,
 });
 export const useDrawer = () => useContext(DrawerContext);
 
 const Tab = createBottomTabNavigator();
 
+// MenuStack เป็น Tab สำหรับหน้า Profile/Contact/Favorite/History
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+const MenuStack = createNativeStackNavigator();
+
+function MenuStackScreen() {
+  return (
+    <MenuStack.Navigator screenOptions={{ headerShown: false }}>
+      <MenuStack.Screen name="ProfileScreen" component={ProfileScreen} />
+      <MenuStack.Screen name="ContactScreen" component={ContactScreen} />
+      <MenuStack.Screen name="FavoriteScreen" component={FavoriteScreen} />
+      <MenuStack.Screen name="HistoryScreen" component={HistoryScreen} />
+    </MenuStack.Navigator>
+  );
+}
+
 export default function App() {
   const { userId, isAuthReady, userProfile } = useAuth();
   const { shelfBooks, isLoading } = useShelfBooks(userId, isAuthReady);
 
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const toggleDrawer = () => setDrawerVisible((prev) => !prev);
+  const toggleDrawer = () => setDrawerVisible(prev => !prev);
   const closeDrawer = () => setDrawerVisible(false);
 
   // Custom Tab Bar
@@ -51,20 +71,28 @@ export default function App() {
       <View style={{ flexDirection: 'row', height: 75, paddingBottom: 8, backgroundColor: '#fff' }}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
-          const isFocused = state.index === index;
+
+          // สำหรับ Tab อื่น ๆ
+          let isFocused = state.index === index;
 
           if (route.name === 'Menu') {
+            // active ถ้า Tab Menu กำลัง active อยู่ ไม่ว่าอยู่หน้า Stack ใดภายใน
+            const menuTabIndex = state.routes.findIndex(r => r.name === 'Menu');
+            isFocused = state.index === menuTabIndex;
+
             return (
               <TouchableOpacity
                 key={route.key}
-                onPress={toggleDrawer} // toggle Drawer ผ่าน Context
+                onPress={toggleDrawer}
                 style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
               >
                 <Image
-                  source={drawerVisible ? MenuActive : MenuInactive}
+                  source={isFocused ? MenuActive : MenuInactive} // active icon ตาม isFocused
                   style={{ width: 28, height: 28 }}
                 />
-                <Text style={{ color: '#999999', fontSize: 12, marginTop: 4 }}>เมนู</Text>
+                <Text style={{ color: isFocused ? '#115566' : '#999999', fontSize: 12, marginTop: 4 }}>
+                  เมนู
+                </Text>
               </TouchableOpacity>
             );
           }
@@ -72,21 +100,11 @@ export default function App() {
           return (
             <TouchableOpacity
               key={route.key}
-              onPress={() => navigation.navigate(route.name)}
+              onPress={() => navigation.jumpTo(route.name)}
               style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
             >
-              {options.tabBarIcon?.({
-                focused: isFocused,
-                color: isFocused ? '#115566' : '#999999',
-                size: 28,
-              })}
-              <Text
-                style={{
-                  color: isFocused ? '#115566' : '#999999',
-                  fontSize: 12,
-                  marginTop: 4,
-                }}
-              >
+              {options.tabBarIcon?.({ focused: isFocused, color: isFocused ? '#115566' : '#999999', size: 28 })}
+              <Text style={{ color: isFocused ? '#115566' : '#999999', fontSize: 12, marginTop: 4 }}>
                 {options.tabBarLabel ?? route.name}
               </Text>
             </TouchableOpacity>
@@ -96,16 +114,14 @@ export default function App() {
     );
   };
 
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <DrawerContext.Provider value={{ toggleDrawer, drawerVisible }}>
           <NavigationContainer>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
-              <Tab.Navigator
-                screenOptions={{ headerShown: false }}
-                tabBar={(props) => <CustomTabBar {...props} />}
-              >
+              <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={props => <CustomTabBar {...props} />}>
                 <Tab.Screen
                   name="Library"
                   options={{
@@ -118,13 +134,7 @@ export default function App() {
                     ),
                   }}
                 >
-                  {() => (
-                    <LibraryScreenStack
-                      userId={userId}
-                      shelfBooks={shelfBooks}
-                      userProfile={userProfile}
-                    />
-                  )}
+                  {() => <LibraryScreenStack userId={userId} shelfBooks={shelfBooks} userProfile={userProfile} />}
                 </Tab.Screen>
 
                 <Tab.Screen
@@ -139,13 +149,7 @@ export default function App() {
                     ),
                   }}
                 >
-                  {() => (
-                    <ShelfScreen
-                      userId={userId}
-                      shelfBooks={shelfBooks}
-                      isLoading={isLoading}
-                    />
-                  )}
+                  {() => <ShelfScreen userId={userId} shelfBooks={shelfBooks} isLoading={isLoading} />}
                 </Tab.Screen>
 
                 <Tab.Screen
@@ -163,19 +167,13 @@ export default function App() {
                   {() => <SearchScreen />}
                 </Tab.Screen>
 
-                {/* Route สำหรับ Menu */}
                 <Tab.Screen
                   name="Menu"
-                  component={() => null} // ไม่แสดงอะไร
+                  component={MenuStackScreen} // MenuStack ทั้งหมด
                 />
               </Tab.Navigator>
 
-              {/* DrawerMenu Overlay */}
-              <DrawerMenu
-                visible={drawerVisible}
-                onClose={closeDrawer}
-                userProfile={userProfile}
-              />
+              <DrawerMenu visible={drawerVisible} onClose={closeDrawer} userProfile={userProfile} />
             </SafeAreaView>
           </NavigationContainer>
         </DrawerContext.Provider>

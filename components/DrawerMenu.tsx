@@ -21,18 +21,12 @@ export default function DrawerMenu({ visible, onClose, userProfile }: Props) {
   if (!visible) return null;
 
   const handleNavigate = (screenName: string) => {
-    onClose(); // ปิด Drawer
+    onClose();
 
-    // ไป Tab Menu
-    navigation.navigate('Menu');
-
-    // navigate หน้าใน MenuStack
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: screenName,
-      })
-    );
+    // ไป Tab Menu ก่อน แล้ว navigate ภายใน Stack
+    navigation.navigate('Menu', { screen: screenName });
   };
+
 
   const handleLogout = () => {
     onClose();
@@ -42,34 +36,36 @@ export default function DrawerMenu({ visible, onClose, userProfile }: Props) {
   return (
     <Pressable style={styles.overlay} onPress={onClose}>
       <View style={styles.drawer}>
-        <Text style={styles.drawerTitle}>เมนู <Image source={MenuIcon}/></Text>
+        <Text style={styles.drawerTitle}>
+          เมนู <Image source={MenuIcon} />
+        </Text>
         <View style={styles.divider} />
 
         <ScrollView>
           <Pressable style={styles.menuItem} onPress={() => handleNavigate('ProfileScreen')}>
             <Text style={styles.menuText}>บัญชีผู้ใช้</Text>
-            <Image source={AccountIcon}/>
+            <Image source={AccountIcon} />
           </Pressable>
 
           <Pressable style={styles.menuItem} onPress={() => handleNavigate('ContactScreen')}>
             <Text style={styles.menuText}>ติดต่อห้องสมุด</Text>
-            <Image source={ContactIcon}/>
+            <Image source={ContactIcon} />
           </Pressable>
 
           <Pressable style={styles.menuItem} onPress={() => handleNavigate('FavoriteScreen')}>
             <Text style={styles.menuText}>รายการโปรด</Text>
-            <Image source={FavoriteIcon}/>
+            <Image source={FavoriteIcon} />
           </Pressable>
 
           <Pressable style={styles.menuItem} onPress={() => handleNavigate('HistoryScreen')}>
             <Text style={styles.menuText}>ประวัติการอ่าน</Text>
-            <Image source={HistoryIcon}/>
+            <Image source={HistoryIcon} />
           </Pressable>
         </ScrollView>
 
         <Pressable style={[styles.menuItem, styles.logout]} onPress={handleLogout}>
           <Text style={[styles.menuText, { color: '#FF3B30' }]}>ออกจากระบบ</Text>
-          <Image source={LogoutIcon}/>
+          <Image source={LogoutIcon} />
         </Pressable>
       </View>
     </Pressable>
