@@ -1,7 +1,10 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const screenWidth = Dimensions.get('window').width;
+export const cardWidth = (screenWidth - 48) / 3; // 3 cards per row + spacing
 
 export const styles = StyleSheet.create({
-  // 🔹 Header (ปรับขนาด / padding / spacing / profile)
+  // ---------- Header ----------
   customHeader: {
     backgroundColor: '#115566',
     width: '100%',
@@ -22,15 +25,8 @@ export const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
   },
-  menuIcon: {
-    width: 28,
-    height: 28,
-    position: 'absolute',
-    right: 16,
-    top: 40,
-  },
 
-  // 🔹 Tabs ด้านล่าง header
+  // ---------- Sub Tabs ----------
   subTabContainer: {
     flexDirection: 'row',
     backgroundColor: '#115566',
@@ -56,18 +52,101 @@ export const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
-  // 🔹 เนื้อหา FlatList
-  flatListContent: {
-    paddingTop: 20,
-    paddingBottom: 120,
-    paddingHorizontal: 8,
+  // ---------- Home Tab Book Card (ขอบมนเล็ก แบบเดิม) ----------
+  bookCard: {
+    width: 140,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 8,
+    marginVertical: 6,
+    padding: 6,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  cover: {
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  author: {
+    fontSize: 12,
+    color: 'gray',
+    textAlign: 'center',
+    marginTop: 2,
   },
 
-  // 🔹 หมวดหมู่หนังสือ
+  // ---------- Genre / Categories Book Card (ไม่มีขอบมน) ----------
+  genreBookCard: {
+    width: cardWidth,
+    marginHorizontal: 4,
+    paddingBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  genreBookCover: {
+    width: '100%',
+    height: cardWidth * 1.4,
+  },
+  genreBookTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  genreBookAuthor: {
+    fontSize: 12,
+    color: 'gray',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // ---------- Genre / Categories / All Books ----------
+  genreBookCardAll: {
+    flex: 1,
+    margin: 4,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    alignItems: 'center',
+  },
+  genreBookCoverAll: {
+    width: '100%',
+    aspectRatio: 0.7,
+    borderRadius: 4,
+  },
+  genreBookTitleAll: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  genreBookAuthorAll: {
+    fontSize: 12,
+    color: 'gray',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // ---------- Genre Header ----------
   genreSection: {
-    marginTop: 20,
+    marginVertical: 16,
     paddingHorizontal: 8,
-    marginBottom: 20,
   },
   genreHeader: {
     flexDirection: 'row',
@@ -87,47 +166,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // 🔹 การ์ดหนังสือ
-  bookCard: {
-    width: 140,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginHorizontal: 8,
-    marginVertical: 6,
-    elevation: 3,
-    padding: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-  },
-  cover: {
-    width: '100%',
-    height: 180,
-    borderRadius: 8,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 6,
-  },
-
-  // 🔹 รายการหมวดหมู่ในแท็บ "หมวดหมู่"
-  categoryItem: {
-    fontSize: 18,
-    fontWeight: '600',
-    paddingVertical: 12,
-    paddingLeft: 16,
-    color: '#115566',
-  },
-
-  // 🔹 หน้า “ดูทั้งหมด”
-  genreBooksContainer: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-    paddingVertical: 16,
-  },
+  // ---------- Back Button ----------
   backButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -146,37 +185,31 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // 🔹 การ์ดหนังสือใน GenreBooksScreen
-  genreBookCard: {
-    flexDirection: 'row',
+  // ---------- Home Large Book Card (แถวละ 2 เล่ม) ----------
+  homeBookCardLarge: {
+    width: '48%', // 2 cards per row
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 16,
     padding: 12,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    marginHorizontal: 12,
-    marginVertical: 6,
-    borderRadius: 12,
-    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  genreBookCover: {
-    width: 90,
-    height: 140,
-    borderRadius: 10,
+  homeBookCoverLarge: {
+    width: '70%',
+    aspectRatio: 0.7,
+    borderRadius: 0, // ปกหนังสือไม่มน
+    marginTop: 8,
   },
-  genreBookInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  genreBookTitle: {
-    fontWeight: '700',
+  homeBookTitleLarge: {
     fontSize: 16,
-    color: '#115566',
-  },
-  genreBookAuthor: {
-    color: '#666',
-    marginTop: 4,
+    fontWeight: '600',
+    color: '#1E1E1E',
+    marginBottom: 4,
+    textAlign: 'center',
   },
 });
