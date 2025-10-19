@@ -1,31 +1,33 @@
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
-  // 🔹 รูปโปรไฟล์
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginTop: 20,
-    marginRight: 16,
-  },
-
-  // 🔹 Header
+  // 🔹 Header (ปรับขนาด / padding / spacing / profile)
   customHeader: {
     backgroundColor: '#115566',
+    width: '100%',
+    paddingHorizontal: 40,
+    paddingVertical: 40,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    alignItems: 'center',
+    position: 'relative',
   },
   headerTitle: {
     fontSize: 30,
     fontWeight: '800',
     color: '#B0BA1D',
-    marginTop: 20,
-    marginLeft: 20,
-    marginBottom: 20,
+  },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+    position: 'absolute',
+    right: 16,
+    top: 40,
   },
 
   // 🔹 Tabs ด้านล่าง header
@@ -61,11 +63,11 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
 
-  // 🔹 หมวดหมู่หนังสือ (หน้าแรก + หมวดหมู่)
+  // 🔹 หมวดหมู่หนังสือ
   genreSection: {
     marginTop: 20,
     paddingHorizontal: 8,
-    marginBottom: 20
+    marginBottom: 20,
   },
   genreHeader: {
     flexDirection: 'row',
@@ -85,7 +87,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // 🔹 การ์ดหนังสือ (หน้า Library)
+  // 🔹 การ์ดหนังสือ
   bookCard: {
     width: 140,
     backgroundColor: '#fff',

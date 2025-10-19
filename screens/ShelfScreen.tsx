@@ -1,26 +1,50 @@
-// ShelfScreen placeholder
-// screens/ShelfScreen.tsx
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+} from 'react-native';
 import BookInteractionModal from '../components/BookInteractionModal';
 import LibraryService from '../services/LibraryService';
+import styles from '../styles/ShelfScreenStyle';
+import NoIcon from '../assets/healthicons_no.png';
+import SearchBar from '../components/SearchBar';
 
 type Props = {
-  userId: string | null;
-  shelfBooks: any[];
-  isLoading: boolean;
-  searchTerm: string;
+  userId?: string | null;
+  shelfBooks?: any[];
+  isLoading?: boolean;
+  searchTerm?: string;
+  userProfile?: { photoURL?: string };
 };
 
-export default function ShelfScreen({ userId, shelfBooks, isLoading, searchTerm }: Props) {
+const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+export default function ShelfScreen({
+  userId,
+  shelfBooks = [],
+  isLoading = false,
+  searchTerm = '',
+  userProfile,
+}: Props) {
   const [active, setActive] = React.useState<any | null>(null);
   const [modalVisible, setModalVisible] = React.useState(false);
+  const [searchText, setSearchText] = React.useState(searchTerm || '');
 
+  // Filter books by search text
   const filtered = useMemo(() => {
-    if (!searchTerm) return shelfBooks;
-    const s = searchTerm.toLowerCase();
-    return shelfBooks.filter(b => (b.title ?? '').toLowerCase().includes(s) || (b.author ?? '').toLowerCase().includes(s));
-  }, [shelfBooks, searchTerm]);
+    if (!searchText) return shelfBooks;
+    const s = searchText.toLowerCase();
+    return shelfBooks.filter(
+      b =>
+        (b.title ?? '').toLowerCase().includes(s) ||
+        (b.author ?? '').toLowerCase().includes(s)
+    );
+  }, [shelfBooks, searchText]);
 
   const handleReturn = async (id: string) => {
     if (!userId) return;
@@ -36,7 +60,6 @@ export default function ShelfScreen({ userId, shelfBooks, isLoading, searchTerm 
   const handleExtend = async (id: string) => {
     if (!userId) return;
     try {
-      // extend by 7 days
       await LibraryService.extendLoan(userId, id, 7);
     } catch (e) {
       alert('Extend failed.');
@@ -45,34 +68,34 @@ export default function ShelfScreen({ userId, shelfBooks, isLoading, searchTerm 
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}><ActivityIndicator size="small" /></View>
-    );
-  }
-
-  if (!filtered.length) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ fontSize: 22 }}>📚</Text>
-        <Text style={{ fontWeight: '600', marginTop: 8 }}>Your shelf is empty!</Text>
-        <Text style={{ color: '#666', marginTop: 4 }}>Borrow a book from Library.</Text>
-      </View>
-    );
-  }
-
   const renderItem = ({ item }: { item: any }) => {
-    const daysLeft = Math.ceil(((item.dueDate ?? new Date()).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const dueDate = item.dueDate ? new Date(item.dueDate) : new Date();
+    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     const isOverdue = daysLeft < 0;
     const statusLabel = isOverdue ? `OVERDUE by ${-daysLeft}d` : `${daysLeft} days left`;
 
     return (
-      <Pressable onLongPress={() => { setActive(item); setModalVisible(true); }} style={styles.shelfItem}>
+      <Pressable
+        onLongPress={() => {
+          setActive(item);
+          setModalVisible(true);
+        }}
+        style={styles.shelfItem}
+      >
         <View style={{ flex: 1 }}>
           <Text style={styles.shelfTitle}>{item.title}</Text>
           <Text style={styles.shelfAuthor}>by {item.author}</Text>
         </View>
-        <View style={[styles.statusPill, isOverdue ? styles.statusOverdue : daysLeft < 3 ? styles.statusWarn : styles.statusOk]}>
+        <View
+          style={[
+            styles.statusPill,
+            isOverdue
+              ? styles.statusOverdue
+              : daysLeft < 3
+              ? styles.statusWarn
+              : styles.statusOk,
+          ]}
+        >
           <Text style={styles.statusText}>{statusLabel}</Text>
         </View>
       </Pressable>
@@ -80,11 +103,51 @@ export default function ShelfScreen({ userId, shelfBooks, isLoading, searchTerm 
   };
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Your Borrowed Books ({filtered.length})</Text>
-      <Text style={styles.tip}>Long-press a book to return or extend.</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
+      {/* Header + Search */}
+      <View style={styles.customHeader}>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
+          <Image
+            source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
+            style={styles.profileImage}
+          />
+        </View>
 
-      <FlatList data={filtered} keyExtractor={(i) => i.id} renderItem={renderItem} ItemSeparatorComponent={() => <View style={{ height: 10 }} />} contentContainerStyle={{ paddingBottom: 120 }} />
+        <SearchBar
+          value={searchText}
+          onChange={setSearchText}
+          placeholder="ชื่อหนังสือ หรือชื่อผู้แต่ง"
+        />
+      </View>
+
+      {/* Content */}
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="small" />
+        </View>
+      ) : filtered.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>ขออภัย</Text>
+          <Text style={styles.emptyText}>ท่านยังไม่มีหนังสือในชั้นหนังสือ</Text>
+          <Image source={NoIcon} style={[styles.emptyIcon, { tintColor: 'red' }]} />
+        </View>
+      ) : (
+        <>
+          <Text style={styles.sectionTitle}>
+            Your Borrowed Books ({filtered?.length ?? 0})
+          </Text>
+          <Text style={styles.tip}>Long-press a book to return or extend.</Text>
+
+          <FlatList
+            data={filtered}
+            keyExtractor={i => i.id}
+            renderItem={renderItem}
+            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            contentContainerStyle={{ paddingBottom: 120 }}
+          />
+        </>
+      )}
 
       <BookInteractionModal
         visible={modalVisible}
@@ -93,23 +156,6 @@ export default function ShelfScreen({ userId, shelfBooks, isLoading, searchTerm 
         onReturn={handleReturn}
         onExtend={handleExtend}
       />
-    </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  section: { flex: 1, padding: 12, backgroundColor: '#f7f7fb' },
-  sectionTitle: { fontSize: 22, fontWeight: '800', color: '#222', marginBottom: 8 },
-  tip: { color: '#5b5b8a', marginBottom: 12 },
-
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-
-  shelfItem: { flexDirection: 'row', backgroundColor: '#fff', padding: 12, borderRadius: 10, alignItems: 'center' },
-  shelfTitle: { fontWeight: '700' },
-  shelfAuthor: { color: '#666', fontSize: 12, marginTop: 4 },
-  statusPill: { paddingVertical: 6, paddingHorizontal: 8, borderRadius: 8 },
-  statusOk: { backgroundColor: '#10b981' },
-  statusWarn: { backgroundColor: '#f59e0b' },
-  statusOverdue: { backgroundColor: '#ef4444' },
-  statusText: { color: '#fff', fontWeight: '700', fontSize: 12 }
-});
