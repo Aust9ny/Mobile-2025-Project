@@ -55,12 +55,12 @@ export default function HistoryScreen({ userProfile }: { userProfile?: { photoUR
       <Text style={styles.status} numberOfLines={1}>
         {item.viewedAt
           ? new Date(item.viewedAt).toLocaleString('th-TH', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
           : ''}
       </Text>
     </TouchableOpacity>
@@ -72,10 +72,14 @@ export default function HistoryScreen({ userProfile }: { userProfile?: { photoUR
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ประวัติการเข้าชม</Text>
-          <Image
-            source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
-            style={styles.profileImage}
-          />
+
+          {/* กดไปหน้า ProfileScreen */}
+          <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
+            <Image
+              source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
+              style={styles.profileImage}
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
@@ -90,6 +94,7 @@ export default function HistoryScreen({ userProfile }: { userProfile?: { photoUR
           />
         </View>
       </View>
+
 
       {/* Grid Books */}
       {filteredHistory.length > 0 ? (

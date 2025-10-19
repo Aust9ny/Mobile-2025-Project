@@ -71,15 +71,16 @@ export default function App() {
       <View style={{ flexDirection: 'row', height: 75, paddingBottom: 8, backgroundColor: '#fff' }}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
-
-          // สำหรับ Tab อื่น ๆ
           let isFocused = state.index === index;
 
+          // ตรวจสอบ LibraryStack
+          if (route.name === 'Library') {
+            isFocused = state.routes[state.index].name === 'Library';
+          }
+
           if (route.name === 'Menu') {
-            // active ถ้า Tab Menu กำลัง active อยู่ ไม่ว่าอยู่หน้า Stack ใดภายใน
             const menuTabIndex = state.routes.findIndex(r => r.name === 'Menu');
             isFocused = state.index === menuTabIndex;
-
             return (
               <TouchableOpacity
                 key={route.key}
@@ -87,7 +88,7 @@ export default function App() {
                 style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
               >
                 <Image
-                  source={isFocused ? MenuActive : MenuInactive} // active icon ตาม isFocused
+                  source={isFocused ? MenuActive : MenuInactive}
                   style={{ width: 28, height: 28 }}
                 />
                 <Text style={{ color: isFocused ? '#115566' : '#999999', fontSize: 12, marginTop: 4 }}>
@@ -100,7 +101,13 @@ export default function App() {
           return (
             <TouchableOpacity
               key={route.key}
-              onPress={() => navigation.jumpTo(route.name)}
+              onPress={() => {
+                if (route.name === 'Library') {
+                  navigation.navigate('Library', { screen: 'LibraryHome' });
+                } else {
+                  navigation.jumpTo(route.name);
+                }
+              }}
               style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
             >
               {options.tabBarIcon?.({ focused: isFocused, color: isFocused ? '#115566' : '#999999', size: 28 })}

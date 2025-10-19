@@ -71,10 +71,14 @@ export default function FavoriteScreen({ userProfile }: { userProfile?: { photoU
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>รายการโปรด</Text>
-          <Image
-            source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
-            style={styles.profileImage}
-          />
+
+          {/* กดไปหน้า ProfileScreen */}
+          <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
+            <Image
+              source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
+              style={styles.profileImage}
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
@@ -89,6 +93,7 @@ export default function FavoriteScreen({ userProfile }: { userProfile?: { photoU
           />
         </View>
       </View>
+
 
       {/* Grid Books */}
       {filteredBooks.length > 0 ? (

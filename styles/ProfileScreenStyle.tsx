@@ -4,15 +4,19 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f8f8',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between', // profile+input อยู่กลาง ปุ่มอยู่ล่าง
+    alignItems: 'center',
+    paddingVertical: 0, // ลบช่องว่างด้านบน/ล่าง
+    width: '100%',
   },
 
-  // Header แบบเดียวกับ ShelfScreen
+  // Header แบบเต็ม ไม่มีช่องว่างสีขาว
   header: {
     backgroundColor: '#115566',
     paddingVertical: 40,
     paddingHorizontal: 40,
     flexDirection: 'row',
+    width: '100%',
   },
   headerTitle: {
     fontSize: 28,
@@ -20,22 +24,28 @@ export const styles = StyleSheet.create({
     color: '#B0BA1D',
   },
 
-  // โปรไฟล์
-  profileImageContainer: {
-    marginTop: 30,
+  // กล่องกลาง
+  centerContent: {
     alignItems: 'center',
+    width: '100%',
+  },
+
+  profileImageContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
     backgroundColor: '#ccc',
+    marginBottom: 30,
   },
 
-  // ช่องกรอกข้อมูล
   inputContainer: {
-    marginTop: 40,
-    paddingHorizontal: 40,
+    width: '90%',
+    alignItems: 'center',
   },
   inputField: {
     backgroundColor: 'rgba(102, 152, 134,0.2)',
@@ -45,26 +55,23 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: '#115566',
     marginBottom: 20,
+    width: '100%',
   },
-
-  // Label "เปลี่ยนบัญชี" อยู่ใต้ช่องนามสกุล ชิดขวา
   switchLabel: {
-    color: 'gray',
-    fontSize: 14,
-    textDecorationLine: 'underline',
-    textAlign: 'right',
-    marginTop: 0, 
-    marginBottom: 20,
-  },
+  color: 'gray',
+  fontSize: 14,
+  textDecorationLine: 'underline',
+  textAlign: 'right', // ชิดขวา
+  marginTop: 0,
+  marginBottom: 20,
+  width: '100%', // กินพื้นที่เต็ม input
+},
 
-  // ปุ่มด้านล่างสุด
   bottomButtons: {
-    marginTop: 'auto',
     alignItems: 'center',
+    width: '100%',
     marginBottom: 20,
   },
-
-  // ปุ่มออกจากระบบ
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -72,7 +79,6 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 40,
     borderRadius: 50,
-    marginBottom: 10,
   },
   logoutText: {
     color: 'red',
@@ -83,21 +89,5 @@ export const styles = StyleSheet.create({
   logoutIcon: {
     width: 24,
     height: 24,
-  },
-
-  // ปุ่มย้อนกลับ
-  backButton: {
-    backgroundColor: '#115566',
-    borderRadius: 50,
-    paddingHorizontal: 40,
-    paddingVertical: 12,
-    marginBottom: 10,
-    width: 500
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
   },
 });

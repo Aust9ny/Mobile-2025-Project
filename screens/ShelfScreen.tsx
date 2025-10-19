@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import BookInteractionModal from '../components/BookInteractionModal';
 import SearchBar from '../components/SearchBar';
 import NoIcon from '../assets/healthicons_no.png';
@@ -24,6 +24,7 @@ const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
 export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const [borrowHistory, setBorrowHistory] = useState<any[]>([]);
   const [searchText, setSearchText] = useState('');
   const [active, setActive] = useState<any | null>(null);
@@ -115,9 +116,15 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
         }}
         style={{ width: cardWidth, margin: 4 }}
       >
-        <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
-        <Text style={styles.genreBookTitle}>{item.title}</Text>
-        <Text style={styles.genreBookAuthor}>{item.author}</Text>
+        {item.cover ? (
+          <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
+        ) : (
+          <View style={[styles.genreBookCover, { backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ fontSize: 12, color: '#666' }}>No Cover</Text>
+          </View>
+        )}
+        <Text style={styles.genreBookTitle}>{item.title ?? ''}</Text>
+        <Text style={styles.genreBookAuthor}>{item.author ?? ''}</Text>
 
         <Text style={{ fontSize: 12, color: 'gray', marginTop: 2 }}>
           ยืมวันที่: {borrowDate.toLocaleDateString()}
@@ -147,10 +154,12 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
       <View style={[styles.customHeader, { paddingTop: insets.top }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
-          <Image
-            source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
-            style={styles.profileImage}
-          />
+          <Pressable onPress={() => navigation.navigate('ProfileScreen' as never)}>
+            <Image
+              source={{ uri: userProfile?.photoURL ?? DEFAULT_PROFILE }}
+              style={styles.profileImage}
+            />
+          </Pressable>
         </View>
 
         <SearchBar
@@ -174,7 +183,7 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(i) => i.id}
+          keyExtractor={(i) => i.id ?? Math.random().toString()}
           renderItem={renderItem}
           numColumns={3}
           showsVerticalScrollIndicator={false}

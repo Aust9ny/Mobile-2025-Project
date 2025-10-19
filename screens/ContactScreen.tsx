@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, Pressable, Linking, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, ScrollView, Image, Pressable, Linking } from 'react-native';
 import { styles } from '../styles/ContactScreenStyle';
 
 import LocationIcon from '../assets/mdi_location.png';
@@ -13,11 +12,7 @@ import LineIcon from '../assets/fa6-brands_line.png';
 import InstagramIcon from '../assets/streamline_instagram-solid.png';
 import YoutubeIcon from '../assets/mdi_youtube.png';
 
-const { height } = Dimensions.get('window');
-
 export default function ContactScreen() {
-  const navigation = useNavigation<any>();
-  const handleBack = () => navigation.goBack();
   const openLink = (url: string) => Linking.openURL(url).catch(err => console.error(err));
   const makeCall = (number: string) => Linking.openURL(`tel:${number}`).catch(err => console.error(err));
 
@@ -28,8 +23,8 @@ export default function ContactScreen() {
         <Text style={styles.headerTitle}>ติดต่อห้องสมุด</Text>
       </View>
 
-      {/* เนื้อหา + Social + Back */}
-      <View style={{flex:1, justifyContent:'space-between'}}>
+      {/* เนื้อหา + Social */}
+      <View style={styles.mainContent}>
         {/* เนื้อหา */}
         <View style={styles.contentContainer}>
           <Pressable style={styles.row} onPress={() => openLink('https://maps.app.goo.gl/Ty7q2Nj2W3HNN7p87')}>
@@ -63,7 +58,7 @@ export default function ContactScreen() {
           </Pressable>
         </View>
 
-        {/* Social + Website + Back */}
+        {/* Social + Website */}
         <View style={styles.footer}>
           <View style={styles.socialContainer}>
             <Pressable style={styles.socialItem} onPress={() => openLink('https://facebook.com/libsiracha/')}>
@@ -91,10 +86,6 @@ export default function ContactScreen() {
               <Text style={styles.socialText}>lib.src.ku.ac.th</Text>
             </Pressable>
           </View>
-
-          <Pressable style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>ย้อนกลับ</Text>
-          </Pressable>
         </View>
       </View>
     </View>

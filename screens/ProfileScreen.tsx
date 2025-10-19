@@ -1,4 +1,3 @@
-// ProfileScreen.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -9,8 +8,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker'; // <-- แก้ตรงนี้
+import * as ImagePicker from 'expo-image-picker';
 import { styles } from '../styles/ProfileScreenStyle';
 import LogoutIcon from '../assets/material-symbols_logout.png';
 
@@ -24,15 +22,17 @@ type Props = {
 };
 
 export default function ProfileScreen({ userProfile }: Props) {
-  const navigation = useNavigation<any>();
   const [photo, setPhoto] = useState(userProfile?.photoURL);
 
-  const handleLogout = () => navigation.replace('LoginScreen');
-  const handleSwitchAccount = () => navigation.replace('LoginScreen');
-  const handleBack = () => navigation.goBack();
+  const handleLogout = () => {
+    console.log('Logout');
+  };
+
+  const handleSwitchAccount = () => {
+    console.log('Switch Account');
+  };
 
   const handleChangeProfilePhoto = async () => {
-    // ขออนุญาตเข้าถึง Media Library
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert(
@@ -42,7 +42,6 @@ export default function ProfileScreen({ userProfile }: Props) {
       return;
     }
 
-    // เปิด Gallery
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -52,7 +51,7 @@ export default function ProfileScreen({ userProfile }: Props) {
     if (result.canceled) return;
 
     if (result.assets && result.assets.length > 0) {
-      setPhoto(result.assets[0].uri); // เปลี่ยนรูปโปรไฟล์
+      setPhoto(result.assets[0].uri);
     }
   };
 
@@ -63,8 +62,8 @@ export default function ProfileScreen({ userProfile }: Props) {
         <Text style={styles.headerTitle}>บัญชี</Text>
       </View>
 
-      {/* Profile Image */}
-      <View style={styles.profileImageContainer}>
+      {/* Profile Image + Inputs */}
+      <View style={styles.centerContent}>
         <Pressable onPress={handleChangeProfilePhoto} android_ripple={{ color: '#ccc' }}>
           <Image
             source={{
@@ -73,33 +72,34 @@ export default function ProfileScreen({ userProfile }: Props) {
             style={styles.profileImage}
           />
         </Pressable>
-      </View>
 
-      {/* Inputs */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          value={userProfile?.studentId || ''}
-          editable={false}
-          placeholder="รหัสนิสิต"
-          style={styles.inputField}
-        />
-        <TextInput
-          value={userProfile?.firstName || ''}
-          editable={false}
-          placeholder="ชื่อจริง"
-          style={styles.inputField}
-        />
-        <View>
+        <View style={styles.inputContainer}>
           <TextInput
-            value={userProfile?.lastName || ''}
+            value={userProfile?.studentId || ''}
             editable={false}
-            placeholder="นามสกุล"
+            placeholder="รหัสนิสิต"
             style={styles.inputField}
           />
-          <Pressable onPress={handleSwitchAccount}>
-            <Text style={styles.switchLabel}>เปลี่ยนบัญชี</Text>
-          </Pressable>
+          <TextInput
+            value={userProfile?.firstName || ''}
+            editable={false}
+            placeholder="ชื่อจริง"
+            style={styles.inputField}
+          />
+
+          <View style={{ width: '100%' }}>
+            <TextInput
+              value={userProfile?.lastName || ''}
+              editable={false}
+              placeholder="นามสกุล"
+              style={styles.inputField}
+            />
+            <Pressable onPress={handleSwitchAccount} style={{ width: '100%' }}>
+              <Text style={styles.switchLabel}>เปลี่ยนบัญชี</Text>
+            </Pressable>
+          </View>
         </View>
+
       </View>
 
       {/* Bottom Buttons */}
@@ -107,10 +107,6 @@ export default function ProfileScreen({ userProfile }: Props) {
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Image source={LogoutIcon} style={styles.logoutIcon} />
           <Text style={styles.logoutText}>ออกจากระบบ</Text>
-        </Pressable>
-
-        <Pressable style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>ย้อนกลับ</Text>
         </Pressable>
       </View>
     </ScrollView>

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from '../styles/SearchScreenStyle';
 import SearchIcon from '../assets/iconamoon_search-light.png';
 import NoIcon from '../assets/healthicons_no.png';
+import ProfileScreen from './ProfileScreen';
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 const screenWidth = Dimensions.get('window').width;
@@ -86,11 +87,14 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ค้นหา</Text>
-          <Image
-            source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
-            style={styles.profileImage}
-          />
+          <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen')}>
+            <Image
+              source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
+              style={styles.profileImage}
+            />
+          </TouchableOpacity>
         </View>
+
 
         {/* 🔹 Search Bar */}
         <View style={styles.searchBar}>
