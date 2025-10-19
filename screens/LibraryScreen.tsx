@@ -7,6 +7,7 @@ import SearchScreen from './SearchScreen';
 import ProfileScreen from './ProfileScreen';
 import FavoriteScreen from './FavoriteScreen';
 import HistoryScreen from './HistoryScreen';
+import ContactScreen from './ContactScreen';
 import { styles } from '../styles/LibraryScreenStyle';
 
 type Book = {
@@ -200,6 +201,11 @@ export default function LibraryScreenStack({ userId, shelfBooks, userProfile }: 
         options={{ headerShown: false }}
       />
 
+       <Stack.Screen
+        name="ContactScreen"
+        component={ContactScreen}
+        options={{ headerShown: false }}
+      />
 
     </Stack.Navigator>
   );
