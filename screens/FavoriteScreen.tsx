@@ -45,7 +45,7 @@ export default function FavoriteScreen({ userProfile }: { userProfile?: { photoU
                     <Image source={SearchIcon} style={styles.searchIcon} resizeMode="contain" />
                     <TextInput
                         style={styles.input}
-                        placeholder="ค้นหารายการโปรด..."
+                        placeholder="ชื่อหนังสือ หรือชื่อผู้แต่ง"
                         placeholderTextColor="#386156"
                         value={searchText}
                         onChangeText={setSearchText}

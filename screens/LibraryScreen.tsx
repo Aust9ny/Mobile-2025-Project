@@ -6,6 +6,7 @@ import BookDetailScreen from './BookDetailScreen';
 import SearchScreen from './SearchScreen';
 import ProfileScreen from './ProfileScreen';
 import FavoriteScreen from './FavoriteScreen';
+import HistoryScreen from './HistoryScreen';
 import { styles } from '../styles/LibraryScreenStyle';
 
 type Book = {
@@ -192,6 +193,13 @@ export default function LibraryScreenStack({ userId, shelfBooks, userProfile }: 
         component={FavoriteScreen}
         options={{ headerShown: false }}
       />
+
+      <Stack.Screen
+        name="HistoryScreen"
+        component={HistoryScreen}
+        options={{ headerShown: false }}
+      />
+
 
     </Stack.Navigator>
   );
