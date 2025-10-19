@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import BookDetailScreen from './BookDetailScreen';
 import SearchScreen from './SearchScreen';
 import ProfileScreen from './ProfileScreen';
+import FavoriteScreen from './FavoriteScreen';
 import { styles } from '../styles/LibraryScreenStyle';
 
 type Book = {
@@ -185,6 +186,13 @@ export default function LibraryScreenStack({ userId, shelfBooks, userProfile }: 
         component={ProfileScreen}
         options={{ headerShown: false }}
       />
+
+      <Stack.Screen
+        name="FavoriteScreen"
+        component={FavoriteScreen}
+        options={{ headerShown: false }}
+      />
+
     </Stack.Navigator>
   );
 }

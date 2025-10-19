@@ -1,5 +1,4 @@
-// screens/BookDetailScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +8,7 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import styles from '../styles/BookDetailScreenStyle';
 import HeartIconActive from '../assets/mdi_heart.png';
 import HeartIconInactive from '../assets/mdi_heart-outline.png';
@@ -19,12 +19,41 @@ export default function BookDetailScreen({ route, navigation }: any) {
 
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const toggleFavorite = () => {
-    setIsFavorite(prev => !prev);
-    Alert.alert(
-      'รายการโปรด',
-      isFavorite ? 'ลบออกจากรายการโปรดแล้ว' : 'เพิ่มลงในรายการโปรดแล้ว'
-    );
+  // โหลดสถานะ favorite จาก AsyncStorage
+  useEffect(() => {
+    const checkFavorite = async () => {
+      const stored = await AsyncStorage.getItem('favoriteBooks');
+      const favorites = stored ? JSON.parse(stored) : [];
+      const found = favorites.some((b: any) => b.id === book.id);
+      setIsFavorite(found);
+    };
+    checkFavorite();
+  }, [book]);
+
+  const toggleFavorite = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('favoriteBooks');
+      const favorites = stored ? JSON.parse(stored) : [];
+
+      let updatedFavorites;
+      if (isFavorite) {
+        // ลบออกจากรายการโปรด
+        updatedFavorites = favorites.filter((b: any) => b.id !== book.id);
+      } else {
+        // เพิ่มเข้าไป
+        updatedFavorites = [...favorites, book];
+      }
+
+      await AsyncStorage.setItem('favoriteBooks', JSON.stringify(updatedFavorites));
+
+      setIsFavorite((prev) => !prev);
+      Alert.alert(
+        'รายการโปรด',
+        isFavorite ? 'ลบออกจากรายการโปรดแล้ว' : 'เพิ่มลงในรายการโปรดแล้ว'
+      );
+    } catch (error) {
+      console.error('Favorite toggle error:', error);
+    }
   };
 
   const handleBorrow = () => {
@@ -50,9 +79,8 @@ export default function BookDetailScreen({ route, navigation }: any) {
         {
           text: 'ตกลง',
           onPress: () => {
-            // สำหรับตอนนี้ยังไม่ต่อ backend
             Alert.alert('สำเร็จ', 'คุณได้ยืมหนังสือเรียบร้อยแล้ว!');
-            navigation.goBack(); // กลับไปหน้าชั้นหนังสือ
+            navigation.goBack();
           },
         },
       ],

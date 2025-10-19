@@ -71,10 +71,23 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  empty: {
-    textAlign: 'center',
-    color: '#1E1E1E',
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 40,
-    fontSize: 16,
   },
+  emptyText: {
+    color: '#1E1E1E',
+    fontSize: 16,
+    fontWeight: '500',
+    marginVertical: 2,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    marginTop: 10,
+    tintColor: 'red',
+  },
+
 });
