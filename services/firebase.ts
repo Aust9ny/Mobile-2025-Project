@@ -63,4 +63,4 @@ if (!app || !auth || !db) {
   console.log('✅ All Firebase services initialized successfully');
 }
 
-export { app, auth, db };
+export { app, auth, db, firebaseConfig };

@@ -18,7 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import { firebaseConfig } from '../services/firebase';
 import { useRef } from 'react';
-import { RegisterScreen } from './RegisterOtpScreen'
+import RegisterOtpScreen from './RegisterOtpScreen'
 
 
 const RegisterScreen: React.FC = () => {

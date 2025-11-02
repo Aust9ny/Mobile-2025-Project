@@ -154,7 +154,8 @@ export default function App() {
                 if (route.name === "Library") {
                   navigation.navigate("Library", { screen: "LibraryHome" });
                 } else {
-                  navigation.jumpTo(route.name);
+                  // use navigate instead of jumpTo (typed) to switch tabs
+                  navigation.navigate(route.name as any);
                 }
               }}
               style={{
