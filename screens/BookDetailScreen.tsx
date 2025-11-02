@@ -14,6 +14,8 @@ import styles from '../styles/BookDetailScreenStyle';
 import HeartIconActive from '../assets/mdi_heart.png';
 import HeartIconInactive from '../assets/mdi_heart-outline.png';
 
+import { API_URL } from '../services/config';
+
 export default function BookDetailScreen({ route, navigation }: any) {
   const { book } = route.params || {};
   if (!book) return null;
@@ -110,32 +112,23 @@ export default function BookDetailScreen({ route, navigation }: any) {
           text: 'ตกลง',
           onPress: async () => {
             try {
-              // 🔹 บันทึกเข้าชั้นหนังสือ
-              const storedShelf = await AsyncStorage.getItem('bookshelf');
-              const shelf = storedShelf ? JSON.parse(storedShelf) : [];
-              if (!shelf.some((b: any) => b.id === book.id)) {
-                shelf.push(book);
-                await AsyncStorage.setItem('bookshelf', JSON.stringify(shelf));
-              }
-
-              // 🔹 บันทึก borrowHistory
-              const storedHistory = await AsyncStorage.getItem('borrowHistory');
-              const history = storedHistory ? JSON.parse(storedHistory) : [];
-
-              const newBorrow = {
-                ...book,
-                borrowDate: borrowDate.toISOString(),
-                dueDate: dueDate.toISOString(),
-                extended: false,
-              };
-
-              history.push(newBorrow);
-              await AsyncStorage.setItem('borrowHistory', JSON.stringify(history));
-
+              const token = await AsyncStorage.getItem('authToken');
+              if (!token) throw new Error('Not authenticated');
+              const res = await fetch(`${API_URL}/borrows`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ book_id: book.id })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data?.error || 'Borrow failed');
               Alert.alert('สำเร็จ', 'คุณได้ยืมหนังสือเรียบร้อยแล้ว!');
               navigation.goBack();
             } catch (error) {
               console.error('Error borrowing book:', error);
+              Alert.alert('ผิดพลาด', 'ยืมหนังสือไม่สำเร็จ');
             }
           },
         },

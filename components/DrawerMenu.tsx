@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, ScrollView, Image } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
+import useAuth from '../hooks/useAuth';
 import { styles } from '../styles/DrawerMenuStyle';
 
 import MenuIcon from '../assets/charm_menu-hamburger-color.png';
@@ -18,6 +19,7 @@ type Props = {
 
 export default function DrawerMenu({ visible, onClose, userProfile }: Props) {
   const navigation = useNavigation<any>();
+  const { logout } = useAuth();
   if (!visible) return null;
 
   const handleNavigate = (screenName: string) => {
@@ -28,9 +30,10 @@ export default function DrawerMenu({ visible, onClose, userProfile }: Props) {
   };
 
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     onClose();
-    navigation.replace('LoginScreen');
+    await logout();
+    navigation.navigate('Menu', { screen: 'Login' });
   };
 
   return (

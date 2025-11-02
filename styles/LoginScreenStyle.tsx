@@ -8,7 +8,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7F7F0",
   },
   headerContainer: {
-    height: 500,
+    height: 400,
     backgroundColor: "#0A4851",
     justifyContent: "center",
     alignItems: "center",
@@ -58,6 +58,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 20,
   },
+  linkButtonText:{
+    color: "#0A4851",
+    fontSize: 14,
+    textDecorationLine: "underline",
+  },
+  registerHeaderText:{
+    fontSize: 28,
+    fontWeight:"bold",
+    color:"#fefef2",
+
+  },
 
   // --- Input ---
   input: {
@@ -106,6 +117,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#0A4851",
   },
+  // ---ScrollView---
+  scrollView:{
+    flex:1,
+    width:"100%",
+    padding:10,
+    
+  }
 });
 
 export default styles;

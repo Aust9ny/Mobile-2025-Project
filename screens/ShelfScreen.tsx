@@ -7,7 +7,6 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import BookInteractionModal from '../components/BookInteractionModal';
@@ -18,34 +17,28 @@ import styles, { cardWidth } from '../styles/ShelfScreenStyle';
 type Props = {
   userProfile?: { photoURL?: string };
   isLoading?: boolean;
+  shelfBooks?: any[];
+  token?: string | null;
+  onRefresh?: () => void;
 };
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
-export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
+import { API_URL } from '../services/config';
+
+export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks = [], token, onRefresh }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const [borrowHistory, setBorrowHistory] = useState<any[]>([]);
+  const [list, setList] = useState<any[]>(shelfBooks);
   const [searchText, setSearchText] = useState('');
   const [active, setActive] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // โหลด borrowHistory
-  const loadBorrowHistory = async () => {
-    try {
-      const storedHistory = await AsyncStorage.getItem('borrowHistory');
-      const history = storedHistory ? JSON.parse(storedHistory) : [];
-      setBorrowHistory(history);
-    } catch (e) {
-      console.error('Error loading borrow history:', e);
-    }
-  };
-
-  // โหลดทุกครั้งที่หน้าถูก focus
+  // Sync with props
   useFocusEffect(
     useCallback(() => {
-      loadBorrowHistory();
-    }, [])
+      setList(shelfBooks);
+    }, [shelfBooks])
   );
 
   // ฟังก์ชันเช็คว่ายืมต่อได้หรือไม่
@@ -58,10 +51,13 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
   // คืนหนังสือ
   const handleReturn = async (id: string) => {
     try {
-      const updatedHistory = borrowHistory.filter((b) => b.id !== id);
-      await AsyncStorage.setItem('borrowHistory', JSON.stringify(updatedHistory));
-      setBorrowHistory(updatedHistory);
+      const res = await fetch(`${API_URL}/borrows/${id}/return`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` || '' },
+      });
+      if (!res.ok) throw new Error('Return failed');
       setModalVisible(false);
+      onRefresh?.();
     } catch (e) {
       alert('Return failed.');
     }
@@ -70,21 +66,24 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
   // ยืมต่อหนังสือ
   const handleExtend = async (id: string) => {
     try {
-      const updatedHistory = borrowHistory.map((b) => {
-        if (b.id === id) {
-          if (!canExtend(b)) {
-            alert('ไม่สามารถยืมต่อได้แล้ว');
-            return b;
-          }
-          const newDueDate = new Date(b.dueDate);
-          newDueDate.setDate(newDueDate.getDate() + 7);
-          return { ...b, dueDate: newDueDate.toISOString(), extended: true };
-        }
-        return b;
+      const target = list.find(b => b.id === id);
+      if (!target || !canExtend(target)) {
+        alert('ไม่สามารถยืมต่อได้แล้ว');
+        return;
+      }
+      const newDue = new Date(target.due_date || target.dueDate || new Date());
+      newDue.setDate(newDue.getDate() + 7);
+      const res = await fetch(`${API_URL}/borrows/${id}/extend`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` || '',
+        },
+        body: JSON.stringify({ new_due_date: newDue.toISOString() })
       });
-      await AsyncStorage.setItem('borrowHistory', JSON.stringify(updatedHistory));
-      setBorrowHistory(updatedHistory);
+      if (!res.ok) throw new Error('Extend failed');
       setModalVisible(false);
+      onRefresh?.();
     } catch (e) {
       alert('ยืมต่อไม่สำเร็จ');
     }
@@ -92,19 +91,19 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
 
   // Filter books by search text
   const filtered = useMemo(() => {
-    if (!searchText) return borrowHistory;
+    if (!searchText) return list;
     const s = searchText.toLowerCase();
-    return borrowHistory.filter(
+    return list.filter(
       (b) =>
-        (b.title ?? '').toLowerCase().includes(s) ||
-        (b.author ?? '').toLowerCase().includes(s)
+        ((b.title ?? b.book_title ?? '') as string).toLowerCase().includes(s) ||
+        ((b.author ?? b.book_author ?? '') as string).toLowerCase().includes(s)
     );
-  }, [borrowHistory, searchText]);
+  }, [list, searchText]);
 
   // Render การ์ดหนังสือ
   const renderItem = ({ item }: { item: any }) => {
-    const borrowDate = new Date(item.borrowDate);
-    const dueDate = new Date(item.dueDate);
+    const borrowDate = new Date(item.borrow_date ?? item.borrowDate);
+    const dueDate = new Date(item.due_date ?? item.dueDate);
     const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     const isOverdue = daysLeft < 0;
 
@@ -123,8 +122,8 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
             <Text style={{ fontSize: 12, color: '#666' }}>No Cover</Text>
           </View>
         )}
-        <Text style={styles.genreBookTitle}>{item.title ?? ''}</Text>
-        <Text style={styles.genreBookAuthor}>{item.author ?? ''}</Text>
+        <Text style={styles.genreBookTitle}>{item.title ?? item.book_title ?? ''}</Text>
+        <Text style={styles.genreBookAuthor}>{item.author ?? item.book_author ?? ''}</Text>
 
         <Text style={{ fontSize: 12, color: 'gray', marginTop: 2 }}>
           ยืมวันที่: {borrowDate.toLocaleDateString()}
@@ -183,7 +182,7 @@ export default function ShelfScreen({ userProfile, isLoading = false }: Props) {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(i) => i.id ?? Math.random().toString()}
+          keyExtractor={(i) => (i.id ?? i.book_id ?? Math.random()).toString()}
           renderItem={renderItem}
           numColumns={3}
           showsVerticalScrollIndicator={false}
