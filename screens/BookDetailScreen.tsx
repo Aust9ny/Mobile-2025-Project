@@ -54,6 +54,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
     try {
       const backend = getBackendHost();
       const res = await fetch(`${backend}/api/books/mock/${book.id}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setCurrentBook(data);
     } catch (err) {
@@ -105,7 +106,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
           text: 'ตกลง',
           onPress: async () => {
             try {
-              const res = await fetch(`${backend}/api/books/mock/${currentBook.id}/borrow`, {
+              const res = await fetch(`${backend}/api/borrows/mock/${currentBook.id}/borrow`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: 'demo-user', action: 'borrow' }),
@@ -155,7 +156,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
           onPress: async () => {
             const backend = getBackendHost();
             try {
-              const res = await fetch(`${backend}/api/books/mock/${currentBook.id}/return`, {
+              const res = await fetch(`${backend}/api/borrows/mock/${currentBook.id}/return`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -196,7 +197,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
 
     const backend = getBackendHost();
     try {
-      const res = await fetch(`${backend}/api/books/mock/${currentBook.id}/extend`, {
+      const res = await fetch(`${backend}/api/borrows/mock/${currentBook.id}/extend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -245,7 +246,6 @@ export default function BookDetailScreen({ route, navigation }: any) {
     const daysLeft = Math.ceil((dueDate.getTime() - now.getTime()) / (1000*60*60*24));
     const isOverdue = daysLeft < 0;
 
-    // แก้เงื่อนไข: สามารถยืมต่อได้ 1 ครั้ง หาก extended=false และ (เหลือเวลา <=3 หรือ overdue)
     const canExtend = !borrowInfo.extended && (daysLeft <=3 || isOverdue);
 
     return { daysLeft, isOverdue, canExtend };
@@ -260,7 +260,6 @@ export default function BookDetailScreen({ route, navigation }: any) {
       <Text style={styles.title}>{currentBook.title}</Text>
       <Text style={styles.authorPublisher}>โดย {currentBook.author} | {currentBook.publisher}</Text>
 
-      {/* แสดงสถานะการยืม */}
       {borrowInfo && borrowStatus && (
         <View style={{ backgroundColor: borrowStatus.isOverdue ? '#ffebee' : '#e8f5e9', padding: 12, borderRadius: 8, marginVertical: 8 }}>
           <Text style={{ fontSize: 14, color: borrowStatus.isOverdue ? '#c62828' : '#2e7d32', fontWeight: '600' }}>
@@ -279,7 +278,6 @@ export default function BookDetailScreen({ route, navigation }: any) {
         </View>
       )}
 
-      {/* ปุ่มยืม */}
       {!borrowInfo && (
         <Pressable
           style={[styles.borrowBtn, currentBook.available <= 0 && { backgroundColor: '#ccc' }]}
@@ -292,7 +290,6 @@ export default function BookDetailScreen({ route, navigation }: any) {
         </Pressable>
       )}
 
-      {/* ปุ่มยืมต่อและคืน */}
       {borrowInfo && borrowStatus && (
         <>
           {borrowStatus.canExtend && (
