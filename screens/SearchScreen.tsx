@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,51 +7,69 @@ import {
   FlatList,
   TouchableOpacity,
   Keyboard,
-  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from '../styles/SearchScreenStyle';
-import SearchIcon from '../assets/iconamoon_search-light.png';
-import NoIcon from '../assets/healthicons_no.png';
-import ProfileScreen from './ProfileScreen';
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-const screenWidth = Dimensions.get('window').width;
 
 export default function SearchScreen({ userProfile }: { userProfile?: { photoURL?: string } }) {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const [books, setBooks] = useState<any[]>([]);
-  const [searchText, setSearchText] = useState('');
   const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState('');
   const [showSearchResult, setShowSearchResult] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // โหลดข้อมูลหนังสือ (จำลอง)
+  // 🔹 แก้เป็น URL backend จริงของคุณ
+  // Android Emulator: 10.0.2.2:4000
+  // iOS Simulator: localhost:4000
+  // มือถือจริง: IP ของเครื่อง server
+  const API_URL = 'http://10.0.2.2:4000/api/books/search';
+
+  // 🔹 debounce function
+  const debounce = (func: (...args: any[]) => void, delay: number) => {
+    let timer: any;
+    return (...args: any[]) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // 🔹 fetch books
+  const fetchBooks = async (query: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setFilteredBooks(data.books || []);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setFilteredBooks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const debouncedFetchBooks = useCallback(debounce(fetchBooks, 400), []);
+
+  // 🔹 โหลดข้อมูลเริ่มต้น
   useEffect(() => {
-    const dummyBooks = [
-      { id: 1, title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', cover: 'https://picsum.photos/200/300', genre: 'Classic' },
-      { id: 2, title: 'Pride and Prejudice', author: 'Jane Austen', cover: 'https://picsum.photos/200/301', genre: 'Romance' },
-      { id: 3, title: '1984', author: 'George Orwell', cover: 'https://picsum.photos/200/302', genre: 'Dystopian' },
-      { id: 4, title: 'To Kill a Mockingbird', author: 'Harper Lee', cover: 'https://picsum.photos/200/303', genre: 'Classic' },
-    ];
-    setBooks(dummyBooks);
-    setFilteredBooks(dummyBooks);
+    fetchBooks('');
   }, []);
 
-  // filter เมื่อ searchText เปลี่ยน
+  // 🔹 filter เมื่อ searchText เปลี่ยน
   useEffect(() => {
     if (searchText.trim() === '') {
-      // กลับไปหน้า default
       setShowSearchResult(false);
-      setFilteredBooks(books);
+      fetchBooks('');
     } else {
-      const filtered = books.filter((book) =>
-        book.title.toLowerCase().includes(searchText.toLowerCase())
-      );
-      setFilteredBooks(filtered);
+      debouncedFetchBooks(searchText);
+      setShowSearchResult(true);
     }
-  }, [searchText, books]);
+  }, [searchText]);
 
   const handleSubmitSearch = () => {
     Keyboard.dismiss();
@@ -83,7 +101,7 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FCF8' }}>
-      {/* 🔹 Header */}
+      {/* Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ค้นหา</Text>
@@ -95,10 +113,13 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
           </TouchableOpacity>
         </View>
 
-
-        {/* 🔹 Search Bar */}
+        {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Image source={SearchIcon} style={styles.searchIcon} resizeMode="contain" />
+          <Image
+            source={require('../assets/iconamoon_search-light.png')}
+            style={styles.searchIcon}
+            resizeMode="contain"
+          />
           <TextInput
             style={styles.input}
             placeholder="ชื่อหนังสือ หรือชื่อผู้แต่ง"
@@ -110,14 +131,17 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
         </View>
       </View>
 
-      {/* 🔹 แสดงผล */}
-      {showSearchResult ? (
+      {/* แสดงผล */}
+      {loading ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>กำลังโหลด...</Text>
+        </View>
+      ) : showSearchResult ? (
         filteredBooks.length > 0 ? (
           <FlatList
-            data={filteredBooks.slice(1)} // แสดง grid สำหรับเล่มถัดไป
+            data={filteredBooks.slice(1)}
             keyExtractor={(item) => item.id.toString()}
             numColumns={3}
-            key={3}
             columnWrapperStyle={{ justifyContent: 'flex-start', paddingHorizontal: 16, marginTop: 16 }}
             renderItem={renderGridBook}
             ListHeaderComponent={
@@ -132,16 +156,17 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
           <View style={styles.center}>
             <Text style={styles.emptyText}>ขออภัย</Text>
             <Text style={styles.emptyText}>ไม่เจอหนังสือที่ท่านต้องการหา</Text>
-            <Image source={NoIcon} style={[styles.emptyIcon, { tintColor: 'red' }]} />
+            <Image
+              source={require('../assets/healthicons_no.png')}
+              style={[styles.emptyIcon, { tintColor: 'red' }]}
+            />
           </View>
         )
       ) : (
-        // หน้า default
         <FlatList
-          data={books}
+          data={filteredBooks}
           keyExtractor={(item) => item.id.toString()}
           numColumns={3}
-          key={3}
           columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 8, marginTop: 16 }}
           renderItem={renderGridBook}
           contentContainerStyle={{ paddingBottom: 100 }}
