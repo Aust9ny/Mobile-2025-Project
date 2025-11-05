@@ -9,7 +9,6 @@ import {
   Alert,
   Platform
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import BookInteractionModal from '../components/BookInteractionModal';
@@ -17,32 +16,33 @@ import SearchBar from '../components/SearchBar';
 import NoIcon from '../assets/healthicons_no.png';
 import styles, { cardWidth } from '../styles/ShelfScreenStyle';
 
+type Props = {
+  userProfile?: { photoURL?: string };
+  isLoading?: boolean;
+  shelfBooks?: any[];
+  token?: string | null;
+  onRefresh?: () => void;
+};
+
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 const API_BASE =
   Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
 
-export default function ShelfScreen({ userProfile, isLoading = false }: any) {
+import { API_URL } from '../services/config';
+
+export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks = [], token, onRefresh }: Props) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const [borrowHistory, setBorrowHistory] = useState<any[]>([]);
+  const [list, setList] = useState<any[]>(shelfBooks);
   const [searchText, setSearchText] = useState('');
   const [active, setActive] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const loadBorrowHistory = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('borrowHistory');
-      const history = stored ? JSON.parse(stored) : [];
-      setBorrowHistory(history);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
+  // Sync with props
   useFocusEffect(
     useCallback(() => {
-      loadBorrowHistory();
-    }, [])
+      setList(shelfBooks);
+    }, [shelfBooks])
   );
 
   // 🧩 helper function: fetch JSON safely
@@ -64,31 +64,13 @@ export default function ShelfScreen({ userProfile, isLoading = false }: any) {
     if (!book) return;
 
     try {
-      const { ok, data } = await safeFetchJSON(
-        `${API_BASE}/api/borrows/mock/${bookId}/return`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: 'demo-user',
-            borrowDate: book.borrowDate,
-            dueDate: book.dueDate,
-          }),
-        }
-      );
-
-      if (!ok) {
-        Alert.alert('ไม่สำเร็จ', data.error || 'เกิดข้อผิดพลาด');
-        return;
-      }
-
-      const stored = await AsyncStorage.getItem('borrowHistory');
-      const history = stored ? JSON.parse(stored) : [];
-      const updated = history.filter((b: any) => b.id !== bookId);
-      await AsyncStorage.setItem('borrowHistory', JSON.stringify(updated));
-      setBorrowHistory(updated);
-
-      Alert.alert('สำเร็จ', 'คืนหนังสือเรียบร้อยแล้ว');
+      const res = await fetch(`${API_URL}/borrows/${id}/return`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` || '' },
+      });
+      if (!res.ok) throw new Error('Return failed');
+      setModalVisible(false);
+      onRefresh?.();
     } catch (e) {
       console.error(e);
       Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
@@ -101,57 +83,24 @@ export default function ShelfScreen({ userProfile, isLoading = false }: any) {
     if (!book) return;
 
     try {
-      const { ok, data } = await safeFetchJSON(
-        `${API_BASE}/api/borrows/mock/${bookId}/extend`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: 'demo-user',
-            borrowDate: book.borrowDate,
-            dueDate: book.dueDate,
-          }),
-        }
-      );
-
-      if (!ok) {
-        Alert.alert('ไม่สำเร็จ', data.error || 'เกิดข้อผิดพลาด');
+      const target = list.find(b => b.id === id);
+      if (!target || !canExtend(target)) {
+        alert('ไม่สามารถยืมต่อได้แล้ว');
         return;
       }
-
-      const newDueDate = new Date(
-        new Date(book.dueDate).getTime() + 7 * 24 * 60 * 60 * 1000
-      );
-
-      const stored = await AsyncStorage.getItem('borrowHistory');
-      const history = stored ? JSON.parse(stored) : [];
-      const updated = history.map((b: any) =>
-        b.id === bookId
-          ? { ...b, dueDate: newDueDate.toISOString(), extended: true }
-          : b
-      );
-      await AsyncStorage.setItem('borrowHistory', JSON.stringify(updated));
-      setBorrowHistory(updated);
-
-      const thaiMonths = [
-        'มกราคม',
-        'กุมภาพันธ์',
-        'มีนาคม',
-        'เมษายน',
-        'พฤษภาคม',
-        'มิถุนายน',
-        'กรกฎาคม',
-        'สิงหาคม',
-        'กันยายน',
-        'ตุลาคม',
-        'พฤศจิกายน',
-        'ธันวาคม',
-      ];
-      const dueDateStr = `${newDueDate.getDate()} ${
-        thaiMonths[newDueDate.getMonth()]
-      } ${newDueDate.getFullYear() + 543}`;
-
-      Alert.alert('สำเร็จ', `ยืมต่อหนังสือเรียบร้อยแล้ว!\nกำหนดคืนใหม่: ${dueDateStr}`);
+      const newDue = new Date(target.due_date || target.dueDate || new Date());
+      newDue.setDate(newDue.getDate() + 7);
+      const res = await fetch(`${API_URL}/borrows/${id}/extend`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` || '',
+        },
+        body: JSON.stringify({ new_due_date: newDue.toISOString() })
+      });
+      if (!res.ok) throw new Error('Extend failed');
+      setModalVisible(false);
+      onRefresh?.();
     } catch (e) {
       console.error(e);
       Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
@@ -159,22 +108,19 @@ export default function ShelfScreen({ userProfile, isLoading = false }: any) {
   };
 
   const filtered = useMemo(() => {
-    if (!searchText) return borrowHistory;
+    if (!searchText) return list;
     const s = searchText.toLowerCase();
-    return borrowHistory.filter(
+    return list.filter(
       (b) =>
-        (b.title ?? '').toLowerCase().includes(s) ||
-        (b.author ?? '').toLowerCase().includes(s)
+        ((b.title ?? b.book_title ?? '') as string).toLowerCase().includes(s) ||
+        ((b.author ?? b.book_author ?? '') as string).toLowerCase().includes(s)
     );
-  }, [borrowHistory, searchText]);
+  }, [list, searchText]);
 
   const renderItem = ({ item }: { item: any }) => {
-    const borrowDate = new Date(item.borrowDate);
-    const dueDate = new Date(item.dueDate);
-    const now = new Date();
-    const daysLeft = Math.ceil(
-      (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const borrowDate = new Date(item.borrow_date ?? item.borrowDate);
+    const dueDate = new Date(item.due_date ?? item.dueDate);
+    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     const isOverdue = daysLeft < 0;
     const canExtend = !item.extended && daysLeft <= 3;
 
@@ -198,8 +144,9 @@ export default function ShelfScreen({ userProfile, isLoading = false }: any) {
             <Text style={{ fontSize: 12, color: '#666' }}>No Cover</Text>
           </View>
         )}
-        <Text style={styles.genreBookTitle}>{item.title ?? ''}</Text>
-        <Text style={styles.genreBookAuthor}>{item.author ?? ''}</Text>
+        <Text style={styles.genreBookTitle}>{item.title ?? item.book_title ?? ''}</Text>
+        <Text style={styles.genreBookAuthor}>{item.author ?? item.book_author ?? ''}</Text>
+
         <Text style={{ fontSize: 12, color: 'gray', marginTop: 2 }}>
           ยืมวันที่: {borrowDate.toLocaleDateString('th-TH')}
         </Text>
@@ -261,7 +208,7 @@ export default function ShelfScreen({ userProfile, isLoading = false }: any) {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(i) => i.id ?? Math.random().toString()}
+          keyExtractor={(i) => (i.id ?? i.book_id ?? Math.random()).toString()}
           renderItem={renderItem}
           numColumns={3}
           showsVerticalScrollIndicator={false}

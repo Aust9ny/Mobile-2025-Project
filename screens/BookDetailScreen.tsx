@@ -15,45 +15,10 @@ import styles from '../styles/BookDetailScreenStyle';
 import HeartIconActive from '../assets/mdi_heart.png';
 import HeartIconInactive from '../assets/mdi_heart-outline.png';
 
-const DEFAULT_COVER = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+import { API_URL } from '../services/config';
 
-const getBackendHost = () =>
-  Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
-
-const getTempUserId = async () => {
-  try {
-    let tempUserId = await AsyncStorage.getItem('temp_user_id');
-    if (!tempUserId) {
-      tempUserId = `temp_user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      await AsyncStorage.setItem('temp_user_id', tempUserId);
-    }
-    return tempUserId;
-  } catch (error) {
-    return `guest_${Date.now()}`;
-  }
-};
-
-const formatThaiDateTime = (date: Date) => {
-  const thaiMonths = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ];
-  const thaiDays = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-
-  const day = date.getDate();
-  const month = thaiMonths[date.getMonth()];
-  const year = date.getFullYear() + 543;
-  const dayName = thaiDays[date.getDay()];
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-
-  return `วัน${dayName}ที่ ${day} ${month} ${year} เวลา ${hours}:${minutes} น.`;
-};
-
-export default function BookDetailScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
-  const { book, onFavoriteChange, userId: propsUserId } = route.params || {};
+export default function BookDetailScreen({ route, navigation }: any) {
+  const { book } = route.params || {};
   if (!book) return null;
 
   const [isFavorite, setIsFavorite] = useState(false);
@@ -203,60 +168,23 @@ export default function BookDetailScreen() {
           text: 'ยืม',
           onPress: async () => {
             try {
-              const backend = getBackendHost();
-              const res = await fetch(`${backend}/api/borrows/mock/${bookId}/borrow`, {
+              const token = await AsyncStorage.getItem('authToken');
+              if (!token) throw new Error('Not authenticated');
+              const res = await fetch(`${API_URL}/borrows`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, action: 'borrow' }),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ book_id: book.id })
               });
-
               const data = await res.json();
-
-              if (!res.ok) {
-                Alert.alert('ไม่สามารถยืมได้', data.error || 'เกิดข้อผิดพลาด');
-                return;
-              }
-
-              // ✅ อัปเดตสถิติแบบเรียลไทม์จาก backend
-              if (data.updatedStats) {
-                setBookStats(data.updatedStats);
-              } else {
-                await loadBookStats();
-              }
-
-              // ✅ เก็บประวัติการยืมใน AsyncStorage
-              try {
-                const stored = await AsyncStorage.getItem('borrowHistory');
-                const history = stored ? JSON.parse(stored) : [];
-
-                const newBorrow = {
-                  id: currentBook.id,
-                  title: currentBook.title,
-                  author: currentBook.author,
-                  cover: currentBook.cover,
-                  genre: currentBook.genre,
-                  borrowDate: now.toISOString(),
-                  dueDate: data.dueDate || dueDate.toISOString(),
-                  extended: false,
-                };
-
-                const existingIndex = history.findIndex((b: any) => b.id === currentBook.id);
-                if (existingIndex === -1) {
-                  history.push(newBorrow);
-                  await AsyncStorage.setItem('borrowHistory', JSON.stringify(history));
-                  setUserHasBorrowed(true);
-                }
-              } catch (storageErr) {}
-
-              const returnDate = data.dueDate ? new Date(data.dueDate) : dueDate;
-              const returnDateThai = formatThaiDateTime(returnDate);
-
-              Alert.alert(
-                'ยืมหนังสือสำเร็จ',
-                `"${currentBook.title}"\n\nกำหนดคืน:\n${returnDateThai}\n\nหนังสือจะแสดงในชั้นหนังสือของคุณ`
-              );
-            } catch (err) {
-              Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+              if (!res.ok) throw new Error(data?.error || 'Borrow failed');
+              Alert.alert('สำเร็จ', 'คุณได้ยืมหนังสือเรียบร้อยแล้ว!');
+              navigation.goBack();
+            } catch (error) {
+              console.error('Error borrowing book:', error);
+              Alert.alert('ผิดพลาด', 'ยืมหนังสือไม่สำเร็จ');
             }
           },
         },

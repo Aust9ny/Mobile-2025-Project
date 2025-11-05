@@ -16,6 +16,9 @@ type Book = {
   author: string;
   genre: string;
   cover: string;
+  available: number;
+  borrowed: number;
+  total: number;
 };
 
 type Props = {
