@@ -46,35 +46,38 @@ export const styles = StyleSheet.create({
     color: '#1E1E1E',
   },
 
-  // ---------- Grid Book Card (ไม่มี background สีขาว) ----------
+  // ---------- Grid Book Card ----------
   card: {
-    flex: 1,
+    flexDirection: 'column', // จัดเรียงแนวตั้ง
+    alignItems: 'center', // ให้เนื้อหาอยู่ตรงกลาง
     marginBottom: 16,
-    marginHorizontal: 4, // spacing ระหว่าง card
   },
   cover: {
     width: '100%',
-    aspectRatio: 0.7,
+    marginBottom: 8, // เว้นระยะระหว่างรูปกับข้อความ
   },
   title: {
     fontWeight: '700',
     color: '#115566',
     fontSize: 14,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: 'center', // ตรงกลาง
+    width: '100%',
   },
   author: {
     color: '#386156',
     fontSize: 12,
     marginTop: 2,
-    textAlign: 'center',
+    textAlign: 'center', // ตรงกลาง
+    width: '100%',
   },
   status: {
     color: '#666666',
     fontSize: 11,
     fontWeight: '500',
     marginTop: 2,
-    textAlign: 'center', // กึ่งกลาง
+    textAlign: 'center', // ตรงกลาง
+    width: '100%',
   },
 
   // ---------- Empty / No Data ----------

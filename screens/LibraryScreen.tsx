@@ -34,8 +34,54 @@ const Stack = createNativeStackNavigator();
 const BACKEND_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const BACKEND_URL = `http://${BACKEND_HOST}:4000`;
 
+// 🔹 ฟังก์ชันสร้าง/ดึง userId ชั่วคราวสำหรับทดสอบ
+const getTempUserId = async () => {
+  try {
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    let tempUserId = await AsyncStorage.getItem('temp_user_id');
+    
+    if (!tempUserId) {
+      // สร้าง userId ใหม่แบบสุ่ม (เก็บไว้ใช้ตลอดจนกว่าจะลบแอป)
+      tempUserId = `temp_user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await AsyncStorage.setItem('temp_user_id', tempUserId);
+      console.log('🆕 Created temp userId:', tempUserId);
+    }
+    
+    return tempUserId;
+  } catch (error) {
+    // fallback ถ้า AsyncStorage ใช้ไม่ได้
+    return `guest_${Date.now()}`;
+  }
+};
+
+// 🔹 ฟังก์ชันบันทึกการดูหนังสือ
+const logBookView = async (bookId: string, userId: string | null | undefined) => {
+  // ถ้าไม่มี userId ให้สร้าง temp userId
+  const effectiveUserId = userId || await getTempUserId();
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/books/mock/${bookId}/view`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId: effectiveUserId }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to log view:', response.status);
+      return;
+    }
+
+    const data = await response.json();
+    console.log('✅ View logged:', data);
+  } catch (err) {
+    console.error('❌ Log view error:', err);
+  }
+};
+
 function GenreBooksScreen({ route, navigation }: any) {
-  const { genre, books } = route.params;
+  const { genre, books, userId } = route.params;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f8f8f8' }}>
@@ -52,10 +98,8 @@ function GenreBooksScreen({ route, navigation }: any) {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => {
-              // log view ไป backend
-              fetch(`${BACKEND_URL}/api/books/mock/${item.id}/view`, { method: 'POST' })
-                .catch(err => console.error('Log view failed:', err));
-
+              // log view พร้อม userId
+              logBookView(item.id, userId);
               navigation.navigate('BookDetail', { book: item });
             }}
             style={[styles.genreBookCard, { width: cardWidth }]}
@@ -70,7 +114,7 @@ function GenreBooksScreen({ route, navigation }: any) {
   );
 }
 
-function LibraryHome({ shelfBooks, userProfile }: Props) {
+function LibraryHome({ shelfBooks, userProfile, userId }: Props) {
   const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<'Home' | 'Categories'>('Home');
   const [libraryData, setLibraryData] = useState<Book[]>([]);
@@ -100,7 +144,7 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
         <View style={styles.genreHeader}>
           <Text style={styles.genreTitle}>{genre}</Text>
           <Pressable
-            onPress={() => navigation.navigate('GenreBooks', { genre, books })}
+            onPress={() => navigation.navigate('GenreBooks', { genre, books, userId })}
             style={{ flexDirection: 'row', alignItems: 'center' }}
           >
             <Text style={styles.seeAllText}>ดูทั้งหมด</Text>
@@ -114,9 +158,7 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
               <Pressable
                 key={book.id}
                 onPress={() => {
-                  fetch(`${BACKEND_URL}/api/books/mock/${book.id}/view`, { method: 'POST' })
-                    .catch(err => console.error('Log view failed:', err));
-
+                  logBookView(book.id, userId);
                   navigation.navigate('BookDetail', { book });
                 }}
                 style={styles.homeBookCardLarge}
@@ -134,9 +176,7 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
               <Pressable
                 key={book.id}
                 onPress={() => {
-                  fetch(`${BACKEND_URL}/api/books/mock/${book.id}/view`, { method: 'POST' })
-                    .catch(err => console.error('Log view failed:', err));
-
+                  logBookView(book.id, userId);
                   navigation.navigate('BookDetail', { book });
                 }}
                 style={[
@@ -198,7 +238,7 @@ export default function LibraryScreenStack({ userId, shelfBooks, userProfile }: 
   return (
     <Stack.Navigator>
       <Stack.Screen name="LibraryHome" options={{ headerShown: false }}>
-        {(props: any) => <LibraryHome {...props} shelfBooks={shelfBooks} userProfile={userProfile} />}
+        {(props: any) => <LibraryHome {...props} userId={userId} shelfBooks={shelfBooks} userProfile={userProfile} />}
       </Stack.Screen>
 
       <Stack.Screen
@@ -219,8 +259,14 @@ export default function LibraryScreenStack({ userId, shelfBooks, userProfile }: 
 
       <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={{ headerShown: false }} />
+      
       <Stack.Screen name="FavoriteScreen" component={FavoriteScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="HistoryScreen" component={HistoryScreen} options={{ headerShown: false }} />
+      
+      {/* ส่ง userId ไปที่ HistoryScreen */}
+      <Stack.Screen name="HistoryScreen" options={{ headerShown: false }}>
+        {(props: any) => <HistoryScreen {...props} userId={userId} userProfile={userProfile} />}
+      </Stack.Screen>
+      
       <Stack.Screen name="ContactScreen" component={ContactScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
