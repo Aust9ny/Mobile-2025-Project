@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  Alert,
+  Platform
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -23,6 +25,8 @@ type Props = {
 };
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+const API_BASE =
+  Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
 
 import { API_URL } from '../services/config';
 
@@ -41,15 +45,24 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
     }, [shelfBooks])
   );
 
-  // ฟังก์ชันเช็คว่ายืมต่อได้หรือไม่
-  const canExtend = (book: any) => {
-    const dueDate = new Date(book.dueDate);
-    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    return daysLeft <= 3 && !book.extended;
+  // 🧩 helper function: fetch JSON safely
+  const safeFetchJSON = async (url: string, options: any) => {
+    const res = await fetch(url, options);
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      return { ok: res.ok, data };
+    } catch (err) {
+      console.error('⚠️ ไม่สามารถ parse JSON ได้:', text);
+      return { ok: false, data: { error: 'Response ไม่ใช่ JSON' } };
+    }
   };
 
-  // คืนหนังสือ
-  const handleReturn = async (id: string) => {
+  // ✅ คืนหนังสือ
+  const handleReturn = async (bookId: string) => {
+    const book = borrowHistory.find((b) => b.id === bookId);
+    if (!book) return;
+
     try {
       const res = await fetch(`${API_URL}/borrows/${id}/return`, {
         method: 'PUT',
@@ -59,12 +72,16 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
       setModalVisible(false);
       onRefresh?.();
     } catch (e) {
-      alert('Return failed.');
+      console.error(e);
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     }
   };
 
-  // ยืมต่อหนังสือ
-  const handleExtend = async (id: string) => {
+  // ✅ ยืมต่อ
+  const handleExtend = async (bookId: string) => {
+    const book = borrowHistory.find((b) => b.id === bookId);
+    if (!book) return;
+
     try {
       const target = list.find(b => b.id === id);
       if (!target || !canExtend(target)) {
@@ -85,11 +102,11 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
       setModalVisible(false);
       onRefresh?.();
     } catch (e) {
-      alert('ยืมต่อไม่สำเร็จ');
+      console.error(e);
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     }
   };
 
-  // Filter books by search text
   const filtered = useMemo(() => {
     if (!searchText) return list;
     const s = searchText.toLowerCase();
@@ -100,12 +117,12 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
     );
   }, [list, searchText]);
 
-  // Render การ์ดหนังสือ
   const renderItem = ({ item }: { item: any }) => {
     const borrowDate = new Date(item.borrow_date ?? item.borrowDate);
     const dueDate = new Date(item.due_date ?? item.dueDate);
     const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     const isOverdue = daysLeft < 0;
+    const canExtend = !item.extended && daysLeft <= 3;
 
     return (
       <Pressable
@@ -118,7 +135,12 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         {item.cover ? (
           <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
         ) : (
-          <View style={[styles.genreBookCover, { backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }]}>
+          <View
+            style={[
+              styles.genreBookCover,
+              { backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' },
+            ]}
+          >
             <Text style={{ fontSize: 12, color: '#666' }}>No Cover</Text>
           </View>
         )}
@@ -126,7 +148,7 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         <Text style={styles.genreBookAuthor}>{item.author ?? item.book_author ?? ''}</Text>
 
         <Text style={{ fontSize: 12, color: 'gray', marginTop: 2 }}>
-          ยืมวันที่: {borrowDate.toLocaleDateString()}
+          ยืมวันที่: {borrowDate.toLocaleDateString('th-TH')}
         </Text>
         <Text
           style={{
@@ -136,11 +158,18 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
             fontWeight: '600',
           }}
         >
-          {isOverdue ? 'สิ้นสุดการยืม' : `เหลือเวลาอีก ${daysLeft} วัน`}
+          {isOverdue
+            ? `⚠️ เกินกำหนดคืนแล้ว ${Math.abs(daysLeft)} วัน`
+            : `📅 เหลือเวลาอีก ${daysLeft} วัน`}
         </Text>
-        {canExtend(item) && !isOverdue && (
+        {canExtend && (
           <Text style={{ fontSize: 12, color: 'blue', marginTop: 2 }}>
-            สามารถยืมต่อได้
+            💡 ยืมต่อได้อีก 7 วัน
+          </Text>
+        )}
+        {item.extended && (
+          <Text style={{ fontSize: 11, color: 'orange', marginTop: 2 }}>
+            ✓ ยืมต่อแล้ว
           </Text>
         )}
       </Pressable>
@@ -149,7 +178,6 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
-      {/* Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
@@ -160,7 +188,6 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
             />
           </Pressable>
         </View>
-
         <SearchBar
           value={searchText}
           onChange={setSearchText}
@@ -168,7 +195,6 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         />
       </View>
 
-      {/* Content */}
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="small" />
@@ -190,14 +216,29 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         />
       )}
 
-      {/* Modal */}
       <BookInteractionModal
         visible={modalVisible}
         book={active}
         onClose={() => setModalVisible(false)}
-        onReturn={handleReturn}
-        onExtend={handleExtend}
-        canExtend={active ? canExtend(active) : false}
+        onReturn={async (id: string) => {
+          await handleReturn(id);
+          setModalVisible(false);
+        }}
+        onExtend={async (id: string) => {
+          await handleExtend(id);
+          setModalVisible(false);
+        }}
+        canExtend={
+          active
+            ? (() => {
+                const dueDate = new Date(active.dueDate);
+                const daysLeft = Math.ceil(
+                  (dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                );
+                return !active.extended && daysLeft <= 3;
+              })()
+            : false
+        }
       />
     </View>
   );
