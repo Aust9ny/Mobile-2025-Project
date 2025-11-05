@@ -1,15 +1,14 @@
+// screens/BookDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   Image,
+  Pressable,
   ScrollView,
   Alert,
   TouchableOpacity,
-  Platform,
-  ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import styles from '../styles/BookDetailScreenStyle';
 import HeartIconActive from '../assets/mdi_heart.png';
@@ -22,150 +21,95 @@ export default function BookDetailScreen({ route, navigation }: any) {
   if (!book) return null;
 
   const [isFavorite, setIsFavorite] = useState(false);
-  const [currentBook, setCurrentBook] = useState(book);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [bookStats, setBookStats] = useState({
-    total: 10,
-    borrowed: 0,
-    available: 10,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [userHasBorrowed, setUserHasBorrowed] = useState(false);
 
-  const bookId = currentBook.id;
-
+  // 🔹 โหลดสถานะ Favorite ตอนเปิดหน้าหนังสือ
   useEffect(() => {
-    const loadUserId = async () => {
-      const id = propsUserId || await getTempUserId();
-      setUserId(id);
-    };
-    loadUserId();
-  }, [propsUserId]);
-
-  const loadBookStats = async () => {
-    try {
-      const backend = getBackendHost();
-      const res = await fetch(`${backend}/api/books/mock/${bookId}/stats`);
-      if (res.ok) {
-        const data = await res.json();
-        setBookStats({
-          total: data.total || 10,
-          borrowed: data.borrowed || 0,
-          available: data.available || 10,
-        });
-      }
-    } catch (err) {
-      // Silent error
-    }
-  };
-
-  const checkUserBorrowStatus = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('borrowHistory');
-      const history = stored ? JSON.parse(stored) : [];
-      const hasBorrowed = history.some((b: any) => b.id === bookId);
-      setUserHasBorrowed(hasBorrowed);
-    } catch (err) {
-      // Silent error
-    }
-  };
-
-  // ✅ โหลดทุกครั้งที่กลับมาหน้านี้
-  useFocusEffect(
-    React.useCallback(() => {
-      loadBookStats();
-      checkUserBorrowStatus();
-    }, [bookId])
-  );
-
-  // ✅ โหลดอีกครั้งเมื่อ userId พร้อม
-  useEffect(() => {
-    if (userId) {
-      loadBookStats();
-      checkUserBorrowStatus();
-    }
-  }, [userId, bookId]);
-
-  // ✅ โหลด favorite list
-  useEffect(() => {
-    if (!userId) return;
-    const loadFavorite = async () => {
+    const loadFavoriteStatus = async () => {
       try {
-        const backend = getBackendHost();
-        const res = await fetch(`${backend}/api/users/1/favorites`);
-        const data = await res.json();
-        if (res.ok && data.favorites) {
-          const favorited = data.favorites.some((b: any) => b.id === bookId);
-          setIsFavorite(favorited);
-        }
-      } catch (err) {
-        // Silent error
-      } finally {
-        setIsLoading(false);
+        const stored = await AsyncStorage.getItem('favoriteBooks');
+        const favorites = stored ? JSON.parse(stored) : [];
+        const exists = favorites.some((b: any) => b.id === book.id);
+        setIsFavorite(exists);
+      } catch (error) {
+        console.error('Error loading favorite status:', error);
       }
     };
-    loadFavorite();
-  }, [bookId, userId]);
 
-  const toggleFavorite = async () => {
-    const action = isFavorite ? 'remove' : 'add';
-    setIsFavorite(prev => !prev);
-    if (onFavoriteChange) onFavoriteChange(bookId, action);
+    loadFavoriteStatus();
+  }, [book]);
 
-    try {
-      const backend = getBackendHost();
-      const res = await fetch(`${backend}/api/users/1/favorite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookId: Number(bookId), action }),
-      });
+  // 🔹 บันทึกประวัติการเข้าชม
+  useEffect(() => {
+    const addToHistory = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('viewHistory');
+        const history = stored ? JSON.parse(stored) : [];
 
-      if (!res.ok) {
-        setIsFavorite(prev => !prev);
-        if (onFavoriteChange) onFavoriteChange(bookId, isFavorite ? 'add' : 'remove');
-        const data = await res.json();
-        Alert.alert('ข้อผิดพลาด', data.error || 'ไม่สามารถอัปเดตรายการโปรดได้');
-        return;
+        const existingIndex = history.findIndex((b: any) => b.id === book.id);
+        if (existingIndex >= 0) {
+          history[existingIndex].viewedAt = new Date().toISOString();
+        } else {
+          history.push({ ...book, viewedAt: new Date().toISOString() });
+        }
+
+        await AsyncStorage.setItem('viewHistory', JSON.stringify(history));
+      } catch (error) {
+        console.error('Error saving view history:', error);
       }
+    };
+
+    addToHistory();
+  }, [book]);
+
+  // 🔹 สลับสถานะ Favorite
+  const toggleFavorite = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('favoriteBooks');
+      const favorites = stored ? JSON.parse(stored) : [];
+
+      let updatedFavorites;
+      if (isFavorite) {
+        updatedFavorites = favorites.filter((b: any) => b.id !== book.id);
+      } else {
+        updatedFavorites = [...favorites, book];
+      }
+
+      await AsyncStorage.setItem('favoriteBooks', JSON.stringify(updatedFavorites));
+      setIsFavorite((prev) => !prev);
 
       Alert.alert(
         'รายการโปรด',
-        action === 'add' ? 'เพิ่มลงในรายการโปรดแล้ว' : 'ลบออกจากรายการโปรดแล้ว'
+        isFavorite ? 'ลบออกจากรายการโปรดแล้ว' : 'เพิ่มลงในรายการโปรดแล้ว'
       );
-    } catch (err) {
-      setIsFavorite(prev => !prev);
-      if (onFavoriteChange) onFavoriteChange(bookId, isFavorite ? 'add' : 'remove');
-      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    } catch (error) {
+      console.error('Favorite toggle error:', error);
     }
   };
 
-  const handleBorrowBook = async () => {
-    if (!userId) {
-      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถระบุผู้ใช้ได้');
-      return;
-    }
+  // 🔹 กดปุ่มยืม
+  const handleBorrow = async () => {
+    const borrowDate = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(borrowDate.getDate() + 7);
 
-    if (userHasBorrowed) {
-      Alert.alert('แจ้งเตือน', 'คุณยืมหนังสือเล่มนี้อยู่แล้ว');
-      return;
-    }
-
-    if (bookStats.available <= 0) {
-      Alert.alert('แจ้งเตือน', 'หนังสือเล่มนี้ยืมหมดแล้ว');
-      return;
-    }
-
-    const now = new Date();
-    const dueDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const dueDateThai = formatThaiDateTime(dueDate);
+    const thaiMonths = [
+      'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+      'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'
+    ];
+    const day = dueDate.getDate();
+    const month = thaiMonths[dueDate.getMonth()];
+    const year = dueDate.getFullYear() + 543;
+    const hours = dueDate.getHours().toString().padStart(2,'0');
+    const minutes = dueDate.getMinutes().toString().padStart(2,'0');
+    const dueDateStr = `${day} ${month} ${year} เวลา ${hours}:${minutes} น.`;
 
     Alert.alert(
-      'ยืมหนังสือ',
-      `คุณต้องการยืม "${currentBook.title}" ใช่หรือไม่?\n\nกำหนดคืน:\n${dueDateThai}`,
+      'คุณต้องการยืมหนังสือหรือไม่?',
+      `${book.title}\n\nกำหนดคืน\n${dueDateStr}`,
       [
-        { text: 'ยกเลิก', style: 'cancel' },
+        { text: 'ยกเลิก', style: 'destructive' },
         {
-          text: 'ยืม',
+          text: 'ตกลง',
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem('authToken');
@@ -188,63 +132,40 @@ export default function BookDetailScreen({ route, navigation }: any) {
             }
           },
         },
-      ]
+      ],
+      { cancelable: true }
     );
   };
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#115566" />
-      </View>
-    );
-  }
-
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.genre}>{currentBook.genre}</Text>
-      <Image
-        source={{ uri: currentBook.cover?.trim() || DEFAULT_COVER }}
-        style={styles.cover}
-      />
-      <Text style={styles.title}>{currentBook.title}</Text>
+      <Text style={styles.genre}>{book.genre}</Text>
+      <Image source={{ uri: book.cover }} style={styles.cover} />
+      <Text style={styles.title}>{book.title}</Text>
       <Text style={styles.authorPublisher}>
-        โดย {currentBook.author} | {currentBook.publisher || 'ไม่ระบุ'}
+        โดย {book.author} | {book.publisher}
       </Text>
 
-      <TouchableOpacity 
-        style={[
-          styles.borrowButton,
-          (bookStats.available <= 0 || userHasBorrowed) && styles.borrowButtonDisabled
-        ]}
-        onPress={handleBorrowBook}
-        activeOpacity={0.8}
-        disabled={bookStats.available <= 0 || userHasBorrowed}
-      >
-        <Text style={styles.borrowButtonText}>
-          {userHasBorrowed ? 'คุณยืมหนังสือเล่มนี้อยู่แล้ว' : 
-           bookStats.available > 0 ? 'ยืมหนังสือเล่มนี้' : 'หนังสือหมด'}
-        </Text>
-      </TouchableOpacity>
+      <Pressable style={styles.borrowBtn} onPress={handleBorrow}>
+        <Text style={styles.borrowText}>ยืมหนังสือเล่มนี้</Text>
+      </Pressable>
 
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>คงเหลือ</Text>
-          <Text style={styles.statValue}>{bookStats.available}</Text>
+          <Text style={styles.statLabel}>ยอดคงเหลือ</Text>
+          <Text style={[styles.statNumber, styles.available]}>{book.available}</Text>
         </View>
-        
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ทั้งหมด</Text>
-          <Text style={[styles.statValue, styles.statValueRed]}>{bookStats.total}</Text>
+          <Text style={[styles.statNumber, styles.total]}>{book.total}</Text>
         </View>
-        
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ยืมแล้ว</Text>
-          <Text style={[styles.statValue, styles.statValueRed]}>{bookStats.borrowed}</Text>
+          <Text style={[styles.statNumber, styles.borrowed]}>{book.borrowed}</Text>
         </View>
       </View>
 
-      <View style={styles.divider} />
+      <View style={styles.separator} />
 
       <View style={styles.summaryHeader}>
         <Text style={styles.summaryTitle}>เรื่องย่อ</Text>
@@ -257,7 +178,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.summaryText}>{currentBook.summary || 'ไม่มีเรื่องย่อ'}</Text>
+      <Text style={styles.summaryText}>{book.summary}</Text>
     </ScrollView>
   );
 }

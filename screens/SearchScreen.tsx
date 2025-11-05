@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,110 +7,66 @@ import {
   FlatList,
   TouchableOpacity,
   Keyboard,
-  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from '../styles/SearchScreenStyle';
+import SearchIcon from '../assets/iconamoon_search-light.png';
+import NoIcon from '../assets/healthicons_no.png';
+import ProfileScreen from './ProfileScreen';
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-const DEFAULT_BOOK_COVER = 'https://via.placeholder.com/150x200/386156/FFFFFF?text=No+Cover';
+const screenWidth = Dimensions.get('window').width;
 
 export default function SearchScreen({ userProfile }: { userProfile?: { photoURL?: string } }) {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
+  const [books, setBooks] = useState<any[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [filteredBooks, setFilteredBooks] = useState<any[]>([]);
   const [showSearchResult, setShowSearchResult] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const API_URL = 'http://10.0.2.2:4000/api/books/search';
-
-  // ------------------ Helper ------------------
-  const debounce = (func: (...args: any[]) => void, delay: number) => {
-    let timer: any;
-    return (...args: any[]) => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => func(...args), delay);
-    };
-  };
-
-  const getValidImageUrl = (url: string | null | undefined): string => {
-    if (!url || url.trim() === '') return DEFAULT_BOOK_COVER;
-    if (url.startsWith('/')) return `http://10.0.2.2:4000${url}`;
-    if (!/^https?:\/\//i.test(url)) return `http://10.0.2.2:4000/${url}`;
-    return url;
-  };
-
-  const handleImageError = (bookId: string) => {
-    setFilteredBooks(prev =>
-      prev.map(b => (b.id === bookId ? { ...b, cover: DEFAULT_BOOK_COVER } : b))
-    );
-  };
-
-  // ------------------ Fetch ------------------
-  const fetchBooks = async (query: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}?q=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      // ✅ ที่ถูกต้องคือเตรียม URL ให้เสร็จในขั้นตอนนี้
-      const booksWithValidCovers = (data.books || []).map((book: any) => ({
-        ...book,
-        cover: getValidImageUrl(book.cover),
-      }));
-
-      setFilteredBooks(booksWithValidCovers);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setFilteredBooks([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const debouncedFetchBooks = useCallback(debounce(fetchBooks, 400), []);
-
+  // โหลดข้อมูลหนังสือ (จำลอง)
   useEffect(() => {
-    fetchBooks('');
+    const dummyBooks = [
+      { id: 1, title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', cover: 'https://picsum.photos/200/300', genre: 'Classic' },
+      { id: 2, title: 'Pride and Prejudice', author: 'Jane Austen', cover: 'https://picsum.photos/200/301', genre: 'Romance' },
+      { id: 3, title: '1984', author: 'George Orwell', cover: 'https://picsum.photos/200/302', genre: 'Dystopian' },
+      { id: 4, title: 'To Kill a Mockingbird', author: 'Harper Lee', cover: 'https://picsum.photos/200/303', genre: 'Classic' },
+    ];
+    setBooks(dummyBooks);
+    setFilteredBooks(dummyBooks);
   }, []);
 
+  // filter เมื่อ searchText เปลี่ยน
   useEffect(() => {
     if (searchText.trim() === '') {
+      // กลับไปหน้า default
       setShowSearchResult(false);
-      fetchBooks('');
+      setFilteredBooks(books);
     } else {
-      debouncedFetchBooks(searchText);
-      setShowSearchResult(true);
+      const filtered = books.filter((book) =>
+        book.title.toLowerCase().includes(searchText.toLowerCase())
+      );
+      setFilteredBooks(filtered);
     }
-  }, [searchText]);
+  }, [searchText, books]);
 
   const handleSubmitSearch = () => {
     Keyboard.dismiss();
     setShowSearchResult(true);
   };
 
-  // ------------------ Render ------------------
   const renderFirstBook = (book: any) => (
     <TouchableOpacity
       key={book.id}
       style={styles.searchFirstBookContainer}
       onPress={() => navigation.navigate('BookDetail', { book })}
     >
-      <Image
-        // ✅ ใช้ book.cover โดยตรง
-        source={{ uri: book.cover }}
-        style={styles.searchFirstBookCover}
-        onError={() => handleImageError(book.id)}
-      />
-      <Text style={styles.searchFirstBookTitle} numberOfLines={2}>
-        {book.title || 'ไม่มีชื่อหนังสือ'}
-      </Text>
-      <Text style={styles.searchFirstBookAuthor} numberOfLines={1}>
-        {book.author || 'ไม่ทราบผู้แต่ง'}
-      </Text>
+      <Image source={{ uri: book.cover }} style={styles.searchFirstBookCover} />
+      <Text style={styles.searchFirstBookTitle}>{book.title}</Text>
+      <Text style={styles.searchFirstBookAuthor}>{book.author}</Text>
     </TouchableOpacity>
   );
 
@@ -119,23 +75,15 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       style={[styles.genreBookCard, { marginRight: (index + 1) % 3 === 0 ? 0 : 8 }]}
       onPress={() => navigation.navigate('BookDetail', { book: item })}
     >
-      <Image
-        // ✅ ใช้ item.cover โดยตรง
-        source={{ uri: item.cover }}
-        style={styles.genreBookCover}
-        onError={() => handleImageError(item.id)}
-      />
-      <Text style={styles.genreBookTitle} numberOfLines={2}>
-        {item.title || 'ไม่มีชื่อหนังสือ'}
-      </Text>
-      <Text style={styles.genreBookAuthor} numberOfLines={1}>
-        {item.author || 'ไม่ทราบผู้แต่ง'}
-      </Text>
+      <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
+      <Text style={styles.genreBookTitle}>{item.title}</Text>
+      <Text style={styles.genreBookAuthor}>{item.author}</Text>
     </TouchableOpacity>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FCF8' }}>
+      {/* 🔹 Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ค้นหา</Text>
@@ -147,7 +95,10 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
           </TouchableOpacity>
         </View>
 
+
+        {/* 🔹 Search Bar */}
         <View style={styles.searchBar}>
+          <Image source={SearchIcon} style={styles.searchIcon} resizeMode="contain" />
           <TextInput
             style={styles.input}
             placeholder="ชื่อหนังสือ หรือชื่อผู้แต่ง"
@@ -159,21 +110,15 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
         </View>
       </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="small" />
-        </View>
-      ) : showSearchResult ? (
+      {/* 🔹 แสดงผล */}
+      {showSearchResult ? (
         filteredBooks.length > 0 ? (
           <FlatList
-            data={filteredBooks.slice(1)}
+            data={filteredBooks.slice(1)} // แสดง grid สำหรับเล่มถัดไป
             keyExtractor={(item) => item.id.toString()}
             numColumns={3}
-            columnWrapperStyle={{
-              justifyContent: 'flex-start',
-              paddingHorizontal: 16,
-              marginTop: 16,
-            }}
+            key={3}
+            columnWrapperStyle={{ justifyContent: 'flex-start', paddingHorizontal: 16, marginTop: 16 }}
             renderItem={renderGridBook}
             ListHeaderComponent={
               <>
@@ -187,18 +132,17 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
           <View style={styles.center}>
             <Text style={styles.emptyText}>ขออภัย</Text>
             <Text style={styles.emptyText}>ไม่เจอหนังสือที่ท่านต้องการหา</Text>
+            <Image source={NoIcon} style={[styles.emptyIcon, { tintColor: 'red' }]} />
           </View>
         )
       ) : (
+        // หน้า default
         <FlatList
-          data={filteredBooks}
+          data={books}
           keyExtractor={(item) => item.id.toString()}
           numColumns={3}
-          columnWrapperStyle={{
-            justifyContent: 'space-between',
-            paddingHorizontal: 8,
-            marginTop: 16,
-          }}
+          key={3}
+          columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 8, marginTop: 16 }}
           renderItem={renderGridBook}
           contentContainerStyle={{ paddingBottom: 100 }}
         />
