@@ -91,6 +91,9 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
             <Image
               source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
               style={styles.profileImage}
+              onError={(e) => {
+                console.log('Profile image load error:', e.nativeEvent.error);
+              }}
             />
           </TouchableOpacity>
         </View>
@@ -150,3 +153,4 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
     </View>
   );
 }
+
