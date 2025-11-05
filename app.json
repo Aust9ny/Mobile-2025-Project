@@ -1,12 +1,18 @@
 {
   "expo": {
-    "name": "library-frontend",
-    "slug": "library-frontend",
-    "android": {
-      "package": "com.lendme.library"
+    "name": "MyLibraryApp",
+    "slug": "mylibraryapp",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "extra": {
+      "appId": "mylibraryapp-default"
     },
-    "ios": {
-      "bundleIdentifier": "com.lendme.library"
+    "android": {
+      "package": "com.anonymous.mylibraryapp"
     }
   }
 }

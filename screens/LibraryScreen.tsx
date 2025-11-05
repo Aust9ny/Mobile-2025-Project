@@ -23,7 +23,7 @@ type Book = {
 
 type Props = {
   userId?: string | null;
-  shelfBooks?: Partial<Book>[];
+  shelfBooks?: Book[];
   userProfile?: { photoURL?: string };
 };
 
@@ -105,21 +105,7 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
   const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<'Home' | 'Categories'>('Home');
 
-  const libraryData: Book[] = useMemo(() => {
-    if (shelfBooks && shelfBooks.length) {
-      return shelfBooks.map((b) => ({
-        id: b.id ?? '',
-        title: b.title ?? '',
-        author: b.author ?? '',
-        genre: b.genre ?? '',
-        cover: b.cover ?? '',
-        available: b.available ?? 0,
-        borrowed: b.borrowed ?? 0,
-        total: b.total ?? 0,
-      }));
-    }
-    return MOCK_LIBRARY;
-  }, [shelfBooks]);
+  const libraryData: Book[] = shelfBooks && shelfBooks.length ? shelfBooks : MOCK_LIBRARY;
 
   const groupedGenres = useMemo(() => {
     const result: Record<string, Book[]> = {};

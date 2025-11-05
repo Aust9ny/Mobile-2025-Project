@@ -1,15 +1,15 @@
-import React from "react";
-import { View, Text, Pressable, ScrollView, Image } from "react-native";
-import { useNavigation, CommonActions } from "@react-navigation/native";
-import {useAuth} from "../hooks/context/AuthContext";
-import { styles } from "../styles/DrawerMenuStyle";
+import React from 'react';
+import { View, Text, Pressable, ScrollView, Image } from 'react-native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
+import useAuth from '../hooks/useAuth';
+import { styles } from '../styles/DrawerMenuStyle';
 
-import MenuIcon from "../assets/charm_menu-hamburger-color.png";
-import AccountIcon from "../assets/famicons_person.png";
-import ContactIcon from "../assets/fluent_contact-card-group-28-filled.png";
-import FavoriteIcon from "../assets/mdi_heart-black.png";
-import HistoryIcon from "../assets/material-symbols_history.png";
-import LogoutIcon from "../assets/material-symbols_logout.png";
+import MenuIcon from '../assets/charm_menu-hamburger-color.png';
+import AccountIcon from '../assets/famicons_person.png';
+import ContactIcon from '../assets/fluent_contact-card-group-28-filled.png';
+import FavoriteIcon from '../assets/mdi_heart-black.png';
+import HistoryIcon from '../assets/material-symbols_history.png';
+import LogoutIcon from '../assets/material-symbols_logout.png';
 
 type Props = {
   visible: boolean;
@@ -26,13 +26,14 @@ export default function DrawerMenu({ visible, onClose, userProfile }: Props) {
     onClose();
 
     // ไป Tab Menu ก่อน แล้ว navigate ภายใน Stack
-    navigation.navigate("Menu", { screen: screenName });
+    navigation.navigate('Menu', { screen: screenName });
   };
+
 
   const handleLogout = async () => {
     onClose();
     await logout();
-    navigation.navigate("Menu", { screen: "Login" });
+    navigation.navigate('Menu', { screen: 'Login' });
   };
 
   return (
@@ -44,46 +45,29 @@ export default function DrawerMenu({ visible, onClose, userProfile }: Props) {
         <View style={styles.divider} />
 
         <ScrollView>
-          <Pressable
-            style={styles.menuItem}
-            onPress={() => handleNavigate("ProfileScreen")}
-          >
+          <Pressable style={styles.menuItem} onPress={() => handleNavigate('ProfileScreen')}>
             <Text style={styles.menuText}>บัญชีผู้ใช้</Text>
             <Image source={AccountIcon} />
           </Pressable>
 
-          <Pressable
-            style={styles.menuItem}
-            onPress={() => handleNavigate("ContactScreen")}
-          >
+          <Pressable style={styles.menuItem} onPress={() => handleNavigate('ContactScreen')}>
             <Text style={styles.menuText}>ติดต่อห้องสมุด</Text>
             <Image source={ContactIcon} />
           </Pressable>
 
-          <Pressable
-            style={styles.menuItem}
-            onPress={() => handleNavigate("FavoriteScreen")}
-          >
+          <Pressable style={styles.menuItem} onPress={() => handleNavigate('FavoriteScreen')}>
             <Text style={styles.menuText}>รายการโปรด</Text>
             <Image source={FavoriteIcon} />
           </Pressable>
 
-          <Pressable
-            style={styles.menuItem}
-            onPress={() => handleNavigate("HistoryScreen")}
-          >
+          <Pressable style={styles.menuItem} onPress={() => handleNavigate('HistoryScreen')}>
             <Text style={styles.menuText}>ประวัติการเข้าชม</Text>
             <Image source={HistoryIcon} />
           </Pressable>
         </ScrollView>
 
-        <Pressable
-          style={[styles.menuItem, styles.logout]}
-          onPress={handleLogout}
-        >
-          <Text style={[styles.menuText, { color: "#FF3B30" }]}>
-            ออกจากระบบ
-          </Text>
+        <Pressable style={[styles.menuItem, styles.logout]} onPress={handleLogout}>
+          <Text style={[styles.menuText, { color: '#FF3B30' }]}>ออกจากระบบ</Text>
           <Image source={LogoutIcon} />
         </Pressable>
       </View>

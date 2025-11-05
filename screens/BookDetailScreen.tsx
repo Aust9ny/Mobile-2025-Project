@@ -1,3 +1,4 @@
+// screens/BookDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,23 +14,16 @@ import styles from '../styles/BookDetailScreenStyle';
 import HeartIconActive from '../assets/mdi_heart.png';
 import HeartIconInactive from '../assets/mdi_heart-outline.png';
 
-// ⭐️ 1. Import API_URL และ useAuth
-import API_URL from '../config/apiConfig';
-import { useAuth } from '../hooks/context/AuthContext';
-
+import { API_URL } from '../services/config';
 
 export default function BookDetailScreen({ route, navigation }: any) {
   const { book } = route.params || {};
   if (!book) return null;
 
-  // ⭐️ 2. ดึง userToken มาจาก Context
-  const { userToken } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
 
   // 🔹 โหลดสถานะ Favorite ตอนเปิดหน้าหนังสือ
   useEffect(() => {
-    // (Logic นี้ควรจะย้ายไป fetch จาก API /api/library/favorites/mine - ซึ่งอยู่ใน library.routes.js)
-    // แต่ตอนนี้เราจะยังคงใช้ AsyncStorage ไปก่อน
     const loadFavoriteStatus = async () => {
       try {
         const stored = await AsyncStorage.getItem('favoriteBooks');
@@ -55,15 +49,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
         if (existingIndex >= 0) {
           history[existingIndex].viewedAt = new Date().toISOString();
         } else {
-          // ⭐️ FIX: ใช้ field ที่ถูกต้องจาก DB (cover_url)
-          const historyBook = { 
-            id: book.id, 
-            title: book.title, 
-            author: book.author, 
-            cover_url: book.cover_url, 
-            viewedAt: new Date().toISOString() 
-          };
-          history.push(historyBook);
+          history.push({ ...book, viewedAt: new Date().toISOString() });
         }
 
         await AsyncStorage.setItem('viewHistory', JSON.stringify(history));
@@ -77,25 +63,15 @@ export default function BookDetailScreen({ route, navigation }: any) {
 
   // 🔹 สลับสถานะ Favorite
   const toggleFavorite = async () => {
-    // (Logic นี้ควรจะย้ายไป fetch จาก API POST /api/library/favorites/:bookId)
-    // แต่ตอนนี้เราจะยังคงใช้ AsyncStorage ไปก่อน
     try {
       const stored = await AsyncStorage.getItem('favoriteBooks');
       const favorites = stored ? JSON.parse(stored) : [];
-      
-      // ⭐️ FIX: ใช้ field ที่ถูกต้องจาก DB
-      const favoriteBook = { 
-        id: book.id, 
-        title: book.title, 
-        author: book.author, 
-        cover_url: book.cover_url 
-      };
 
       let updatedFavorites;
       if (isFavorite) {
         updatedFavorites = favorites.filter((b: any) => b.id !== book.id);
       } else {
-        updatedFavorites = [...favorites, favoriteBook];
+        updatedFavorites = [...favorites, book];
       }
 
       await AsyncStorage.setItem('favoriteBooks', JSON.stringify(updatedFavorites));
@@ -110,12 +86,12 @@ export default function BookDetailScreen({ route, navigation }: any) {
     }
   };
 
-  // 🔹 กดปุ่มยืม (FIXED)
+  // 🔹 กดปุ่มยืม
   const handleBorrow = async () => {
-    // ... (Logic การแสดงผล dueDateStr เหมือนเดิม) ...
     const borrowDate = new Date();
     const dueDate = new Date();
     dueDate.setDate(borrowDate.getDate() + 7);
+
     const thaiMonths = [
       'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'
@@ -136,30 +112,23 @@ export default function BookDetailScreen({ route, navigation }: any) {
           text: 'ตกลง',
           onPress: async () => {
             try {
-              // ⭐️ 3. ใช้ userToken จาก useAuth() (ปลอดภัยกว่า)
-              if (!userToken) throw new Error('Not authenticated');
-              
-              // ⭐️ 4. (FIX 1) ใช้ API_URL และ Endpoint ที่ถูกต้อง
-              // API Endpoint คือ: POST /api/borrows/:bookId/borrow
-              const res = await fetch(`${API_URL}/api/borrows/${book.id}/borrow`, {
+              const token = await AsyncStorage.getItem('authToken');
+              if (!token) throw new Error('Not authenticated');
+              const res = await fetch(`${API_URL}/borrows`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${userToken}`
+                  'Authorization': `Bearer ${token}`
                 },
-                // ⭐️ 5. (FIX 2) ลบ body ออก (API อ่าน ID จาก URL)
+                body: JSON.stringify({ book_id: book.id })
               });
-              
               const data = await res.json();
               if (!res.ok) throw new Error(data?.error || 'Borrow failed');
-              
               Alert.alert('สำเร็จ', 'คุณได้ยืมหนังสือเรียบร้อยแล้ว!');
               navigation.goBack();
-              
-            } catch (error: any) { // ⭐️ 6. (FIX 3)
+            } catch (error) {
               console.error('Error borrowing book:', error);
-              // แสดง error.message เพื่อให้รู้ว่า Server ตอบอะไรกลับมา
-              Alert.alert('ผิดพลาด', error.message || 'ยืมหนังสือไม่สำเร็จ');
+              Alert.alert('ผิดพลาด', 'ยืมหนังสือไม่สำเร็จ');
             }
           },
         },
@@ -171,12 +140,10 @@ export default function BookDetailScreen({ route, navigation }: any) {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.genre}>{book.genre}</Text>
-      {/* ⭐️ FIX 1: ใช้ cover_url (ตาม schema) แทน book.cover */}
-      <Image source={{ uri: book.cover_url }} style={styles.cover} />
+      <Image source={{ uri: book.cover }} style={styles.cover} />
       <Text style={styles.title}>{book.title}</Text>
-      {/* ⭐️ FIX 2: API ไม่มี publisher, ใช้ author อย่างเดียว */}
       <Text style={styles.authorPublisher}>
-        โดย {book.author}
+        โดย {book.author} | {book.publisher}
       </Text>
 
       <Pressable style={styles.borrowBtn} onPress={handleBorrow}>
@@ -186,22 +153,15 @@ export default function BookDetailScreen({ route, navigation }: any) {
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ยอดคงเหลือ</Text>
-          {/* ⭐️ FIX 3: ใช้ available_copies (ตาม schema) */}
-          <Text style={[styles.statNumber, styles.available]}>{book.available_copies}</Text>
+          <Text style={[styles.statNumber, styles.available]}>{book.available}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ทั้งหมด</Text>
-           {/* ⭐️ FIX 4: ใช้ total_copies (ตาม schema) */}
-          <Text style={[styles.statNumber, styles.total]}>{book.total_copies}</Text>
+          <Text style={[styles.statNumber, styles.total]}>{book.total}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ยืมแล้ว</Text>
-          {/* ⭐️ FIX 5: คำนวณยอดที่ถูกยืม (และเช็ค Error) */}
-          <Text style={[styles.statNumber, styles.borrowed]}>
-            {typeof book.total_copies === 'number' && typeof book.available_copies === 'number'
-              ? book.total_copies - book.available_copies
-              : 'N/A'}
-          </Text>
+          <Text style={[styles.statNumber, styles.borrowed]}>{book.borrowed}</Text>
         </View>
       </View>
 
