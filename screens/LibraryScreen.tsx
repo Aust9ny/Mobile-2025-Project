@@ -41,7 +41,6 @@ const getTempUserId = async () => {
     let tempUserId = await AsyncStorage.getItem('temp_user_id');
     
     if (!tempUserId) {
-      // สร้าง userId ใหม่แบบสุ่ม (เก็บไว้ใช้ตลอดจนกว่าจะลบแอป)
       tempUserId = `temp_user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await AsyncStorage.setItem('temp_user_id', tempUserId);
       console.log('🆕 Created temp userId:', tempUserId);
@@ -49,14 +48,12 @@ const getTempUserId = async () => {
     
     return tempUserId;
   } catch (error) {
-    // fallback ถ้า AsyncStorage ใช้ไม่ได้
     return `guest_${Date.now()}`;
   }
 };
 
 // 🔹 ฟังก์ชันบันทึกการดูหนังสือ
 const logBookView = async (bookId: string, userId: string | null | undefined) => {
-  // ถ้าไม่มี userId ให้สร้าง temp userId
   const effectiveUserId = userId || await getTempUserId();
 
   try {
@@ -98,7 +95,6 @@ function GenreBooksScreen({ route, navigation }: any) {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => {
-              // log view พร้อม userId
               logBookView(item.id, userId);
               navigation.navigate('BookDetail', { book: item });
             }}
@@ -118,6 +114,8 @@ function LibraryHome({ shelfBooks, userProfile, userId }: Props) {
   const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<'Home' | 'Categories'>('Home');
   const [libraryData, setLibraryData] = useState<Book[]>([]);
+  const [recommendedCategories, setRecommendedCategories] = useState<Array<[string, Book[]]>>([]);
+  const [recommendationType, setRecommendationType] = useState<'popular' | 'latest'>('latest');
 
   // 🔹 ดึงข้อมูลหนังสือจาก backend
   useEffect(() => {
@@ -126,6 +124,110 @@ function LibraryHome({ shelfBooks, userProfile, userId }: Props) {
       .then(data => setLibraryData(data.books))
       .catch(err => console.error('Fetch books failed:', err));
   }, []);
+
+  // 🔹 State สำหรับหนังสือใหม่ล่าสุด (แยกจากหนังสือแนะนำ)
+  const [latestCategories, setLatestCategories] = useState<Array<[string, Book[]]>>([]);
+
+  // 🔹 ดึงหนังสือแนะนำแบบแยกหมวดหมู่ (3 หมวด, หมวดละ 2 เล่ม)
+  useEffect(() => {
+    const fetchRecommended = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/books/mock/stats/all`);
+        const data = await response.json();
+        
+        // ถ้ามีหนังสือที่มียอดเข้าชม
+        if (data.topBooks && data.topBooks.length > 0 && data.topBooks[0].views > 0) {
+          // แบ่งหนังสือยอดนิยมตามหมวดหมู่
+          const genreMap: Record<string, Book[]> = {};
+          
+          data.topBooks.forEach((item: any) => {
+            if (item.book) {
+              const genre = item.book.genre;
+              if (!genreMap[genre]) {
+                genreMap[genre] = [];
+              }
+              genreMap[genre].push(item.book);
+            }
+          });
+
+          // เอาแค่ 3 หมวดแรกที่มียอดดูมากที่สุด
+          const sortedGenres = Object.entries(genreMap)
+            .slice(0, 3)
+            .map(([genre, books]) => [genre, books.slice(0, 2)] as [string, Book[]]);
+          
+          setRecommendedCategories(sortedGenres);
+          setRecommendationType('popular');
+        } else {
+          // ถ้ายังไม่มียอดเข้าชม ให้แสดงหนังสือใหม่ล่าสุด (3 หมวดหมู่)
+          const genreMap: Record<string, Book[]> = {};
+          
+          libraryData.forEach((book) => {
+            if (!genreMap[book.genre]) {
+              genreMap[book.genre] = [];
+            }
+            genreMap[book.genre].push(book);
+          });
+
+          // เอา 3 หมวดแรก
+          const latestGenres = Object.entries(genreMap)
+            .slice(0, 3)
+            .map(([genre, books]) => [genre, books.slice(0, 2)] as [string, Book[]]);
+          
+          setRecommendedCategories(latestGenres);
+          setRecommendationType('latest');
+        }
+
+        // 🆕 ดึงหนังสือใหม่ล่าสุดอีก 3 หมวด (แยกจากหนังสือแนะนำ)
+        const genreMap: Record<string, Book[]> = {};
+        
+        libraryData.forEach((book) => {
+          if (!genreMap[book.genre]) {
+            genreMap[book.genre] = [];
+          }
+          genreMap[book.genre].push(book);
+        });
+
+        // เอาหมวดที่ 4-6 หรือ 1-3 ถ้ายังไม่มียอดเข้าชม
+        const startIndex = (data.topBooks && data.topBooks.length > 0 && data.topBooks[0].views > 0) ? 3 : 0;
+        const newLatestGenres = Object.entries(genreMap)
+          .slice(startIndex, startIndex + 3)
+          .map(([genre, books]) => [genre, books.slice(0, 2)] as [string, Book[]]);
+        
+        setLatestCategories(newLatestGenres);
+
+      } catch (err) {
+        console.error('Failed to fetch recommended books:', err);
+        
+        // Fallback: แสดงหนังสือใหม่ล่าสุด
+        const genreMap: Record<string, Book[]> = {};
+        
+        libraryData.forEach((book) => {
+          if (!genreMap[book.genre]) {
+            genreMap[book.genre] = [];
+          }
+          genreMap[book.genre].push(book);
+        });
+
+        const latestGenres = Object.entries(genreMap)
+          .slice(0, 3)
+          .map(([genre, books]) => [genre, books.slice(0, 2)] as [string, Book[]]);
+        
+        setRecommendedCategories(latestGenres);
+        setRecommendationType('latest');
+
+        // หนังสือใหม่อีก 3 หมวด
+        const newLatestGenres = Object.entries(genreMap)
+          .slice(3, 6)
+          .map(([genre, books]) => [genre, books.slice(0, 2)] as [string, Book[]]);
+        
+        setLatestCategories(newLatestGenres);
+      }
+    };
+
+    if (libraryData.length > 0) {
+      fetchRecommended();
+    }
+  }, [libraryData]);
 
   const groupedGenres = useMemo(() => {
     const result: Record<string, Book[]> = {};
@@ -152,49 +254,65 @@ function LibraryHome({ shelfBooks, userProfile, userId }: Props) {
           </Pressable>
         </View>
 
-        {activeTab === 'Home' && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            {books.slice(0, 2).map((book) => (
-              <Pressable
-                key={book.id}
-                onPress={() => {
-                  logBookView(book.id, userId);
-                  navigation.navigate('BookDetail', { book });
-                }}
-                style={styles.homeBookCardLarge}
-              >
-                <Text style={styles.homeBookTitleLarge}>{book.title}</Text>
-                <Image source={{ uri: book.cover }} style={styles.homeBookCoverLarge} resizeMode="cover" />
-              </Pressable>
-            ))}
-          </View>
-        )}
+        {/* แสดงแค่ 2 เล่มในรูปแบบเดียวกับหน้าแรก */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          {books.slice(0, 2).map((book) => (
+            <Pressable
+              key={book.id}
+              onPress={() => {
+                logBookView(book.id, userId);
+                navigation.navigate('BookDetail', { book });
+              }}
+              style={styles.homeBookCardLarge}
+            >
+              <Text style={styles.homeBookTitleLarge}>{book.title}</Text>
+              <Image source={{ uri: book.cover }} style={styles.homeBookCoverLarge} resizeMode="cover" />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    );
+  };
 
-        {activeTab === 'Categories' && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-            {books.slice(0, 3).map((book, index) => (
-              <Pressable
-                key={book.id}
-                onPress={() => {
-                  logBookView(book.id, userId);
-                  navigation.navigate('BookDetail', { book });
-                }}
-                style={[
-                  styles.genreBookCard,
-                  {
-                    width: cardWidth,
-                    marginRight: (index + 1) % 3 === 0 ? 0 : 8,
-                    marginBottom: 12,
-                  },
-                ]}
-              >
-                <Image source={{ uri: book.cover }} style={styles.genreBookCover} />
-                <Text style={styles.genreBookTitle}>{book.title}</Text>
-                <Text style={styles.genreBookAuthor}>{book.author}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
+  const renderCategoryGenre = ({ item }: { item: [string, Book[]] }) => {
+    const [genre, books] = item;
+
+    return (
+      <View style={styles.genreSection}>
+        <View style={styles.genreHeader}>
+          <Text style={styles.genreTitle}>{genre}</Text>
+          <Pressable
+            onPress={() => navigation.navigate('GenreBooks', { genre, books, userId })}
+            style={{ flexDirection: 'row', alignItems: 'center' }}
+          >
+            <Text style={styles.seeAllText}>ดูทั้งหมด</Text>
+            <Text style={styles.seeAllText}>{' >'}</Text>
+          </Pressable>
+        </View>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+          {books.slice(0, 3).map((book, index) => (
+            <Pressable
+              key={book.id}
+              onPress={() => {
+                logBookView(book.id, userId);
+                navigation.navigate('BookDetail', { book });
+              }}
+              style={[
+                styles.genreBookCard,
+                {
+                  width: cardWidth,
+                  marginRight: (index + 1) % 3 === 0 ? 0 : 8,
+                  marginBottom: 12,
+                },
+              ]}
+            >
+              <Image source={{ uri: book.cover }} style={styles.genreBookCover} />
+              <Text style={styles.genreBookTitle}>{book.title}</Text>
+              <Text style={styles.genreBookAuthor}>{book.author}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
     );
   };
@@ -223,12 +341,56 @@ function LibraryHome({ shelfBooks, userProfile, userId }: Props) {
         ))}
       </View>
 
-      <FlatList
-        data={groupedGenres}
-        keyExtractor={([genre]) => genre}
-        renderItem={renderGenre}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* หน้าแรก: แสดงหนังสือแนะนำ 3 หมวด + หนังสือใหม่ล่าสุด 3 หมวด */}
+      {activeTab === 'Home' && (
+        <FlatList
+          data={[
+            { type: 'section', title: recommendationType === 'popular' ? '🔥 หนังสือแนะนำ' : '✨ หนังสือใหม่ล่าสุด' },
+            ...recommendedCategories.map(g => ({ type: 'genre', data: g })),
+            { type: 'section', title: '✨ หนังสือใหม่ล่าสุด' },
+            ...latestCategories.map(g => ({ type: 'genre', data: g })),
+          ]}
+          keyExtractor={(item, index) => {
+            if ('type' in item && item.type === 'section') {
+              return `section-${index}`;
+            }
+            if ('type' in item && item.type === 'genre' && 'data' in item) {
+              return `genre-${item.data[0]}-${index}`;
+            }
+            return `item-${index}`;
+          }}
+          renderItem={({ item }) => {
+            // แสดงหัวข้อ Section
+            if ('type' in item && item.type === 'section') {
+              return (
+                <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 }}>
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>
+                    {item.title}
+                  </Text>
+                </View>
+              );
+            }
+            
+            // แสดงหมวดหมู่
+            if ('type' in item && item.type === 'genre' && 'data' in item) {
+              return renderGenre({ item: item.data as [string, Book[]] });
+            }
+            
+            return null;
+          }}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* หน้าหมวดหมู่: แสดงหมวดหมู่ทั้งหมด */}
+      {activeTab === 'Categories' && (
+        <FlatList
+          data={groupedGenres}
+          keyExtractor={(item, index) => `${item[0]}-${index}`}
+          renderItem={renderCategoryGenre}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -262,7 +424,6 @@ export default function LibraryScreenStack({ userId, shelfBooks, userProfile }: 
       
       <Stack.Screen name="FavoriteScreen" component={FavoriteScreen} options={{ headerShown: false }} />
       
-      {/* ส่ง userId ไปที่ HistoryScreen */}
       <Stack.Screen name="HistoryScreen" options={{ headerShown: false }}>
         {(props: any) => <HistoryScreen {...props} userId={userId} userProfile={userProfile} />}
       </Stack.Screen>
