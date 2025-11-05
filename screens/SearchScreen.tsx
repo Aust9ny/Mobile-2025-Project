@@ -7,13 +7,13 @@ import {
   FlatList,
   TouchableOpacity,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from '../styles/SearchScreenStyle';
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-// 🔹 รูปภาพ fallback สำหรับปกหนังสือที่โหลดไม่สำเร็จ
 const DEFAULT_BOOK_COVER = 'https://via.placeholder.com/150x200/386156/FFFFFF?text=No+Cover';
 
 export default function SearchScreen({ userProfile }: { userProfile?: { photoURL?: string } }) {
@@ -24,10 +24,9 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
   const [showSearchResult, setShowSearchResult] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 🔹 URL backend จริงของคุณ
   const API_URL = 'http://10.0.2.2:4000/api/books/search';
 
-  // 🔹 debounce function
+  // ------------------ Helper ------------------
   const debounce = (func: (...args: any[]) => void, delay: number) => {
     let timer: any;
     return (...args: any[]) => {
@@ -36,26 +35,20 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
     };
   };
 
-  // 🔹 ฟังก์ชันตรวจสอบและแก้ไข URL รูปภาพ
-  const getValidImageUrl = (url: string | null | undefined): string | null => {
-    if (!url || url.trim() === '') {
-      return DEFAULT_BOOK_COVER; // ถ้าไม่มี URL ให้ใช้ภาพ fallback
-    }
-
-    // ถ้าเป็น path (เช่น /uploads/book.jpg) ให้เติม domain
-    if (url.startsWith('/')) {
-      return `http://10.0.2.2:4000${url}`;
-    }
-
-    // ถ้าไม่มี http/https ให้เติม http://10.0.2.2:4000/
-    if (!/^https?:\/\//i.test(url)) {
-      return `http://10.0.2.2:4000/${url}`;
-    }
-
+  const getValidImageUrl = (url: string | null | undefined): string => {
+    if (!url || url.trim() === '') return DEFAULT_BOOK_COVER;
+    if (url.startsWith('/')) return `http://10.0.2.2:4000${url}`;
+    if (!/^https?:\/\//i.test(url)) return `http://10.0.2.2:4000/${url}`;
     return url;
   };
 
-  // 🔹 fetch books
+  const handleImageError = (bookId: string) => {
+    setFilteredBooks(prev =>
+      prev.map(b => (b.id === bookId ? { ...b, cover: DEFAULT_BOOK_COVER } : b))
+    );
+  };
+
+  // ------------------ Fetch ------------------
   const fetchBooks = async (query: string) => {
     setLoading(true);
     try {
@@ -63,7 +56,7 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      // 🔹 ตรวจสอบและแก้ไข URL รูปภาพของหนังสือทุกเล่ม
+      // ✅ ที่ถูกต้องคือเตรียม URL ให้เสร็จในขั้นตอนนี้
       const booksWithValidCovers = (data.books || []).map((book: any) => ({
         ...book,
         cover: getValidImageUrl(book.cover),
@@ -80,12 +73,10 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
 
   const debouncedFetchBooks = useCallback(debounce(fetchBooks, 400), []);
 
-  // 🔹 โหลดข้อมูลเริ่มต้น
   useEffect(() => {
     fetchBooks('');
   }, []);
 
-  // 🔹 filter เมื่อ searchText เปลี่ยน
   useEffect(() => {
     if (searchText.trim() === '') {
       setShowSearchResult(false);
@@ -101,6 +92,7 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
     setShowSearchResult(true);
   };
 
+  // ------------------ Render ------------------
   const renderFirstBook = (book: any) => (
     <TouchableOpacity
       key={book.id}
@@ -108,12 +100,10 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       onPress={() => navigation.navigate('BookDetail', { book })}
     >
       <Image
-        source={{ uri: book.cover || DEFAULT_BOOK_COVER }}
+        // ✅ ใช้ book.cover โดยตรง
+        source={{ uri: book.cover }}
         style={styles.searchFirstBookCover}
-        onError={() => {
-          console.log('Image load error for first book:', book.title);
-          book.cover = DEFAULT_BOOK_COVER;
-        }}
+        onError={() => handleImageError(book.id)}
       />
       <Text style={styles.searchFirstBookTitle} numberOfLines={2}>
         {book.title || 'ไม่มีชื่อหนังสือ'}
@@ -130,12 +120,10 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       onPress={() => navigation.navigate('BookDetail', { book: item })}
     >
       <Image
-        source={{ uri: item.cover || DEFAULT_BOOK_COVER }}
+        // ✅ ใช้ item.cover โดยตรง
+        source={{ uri: item.cover }}
         style={styles.genreBookCover}
-        onError={() => {
-          console.log('Image load error:', item.title);
-          item.cover = DEFAULT_BOOK_COVER;
-        }}
+        onError={() => handleImageError(item.id)}
       />
       <Text style={styles.genreBookTitle} numberOfLines={2}>
         {item.title || 'ไม่มีชื่อหนังสือ'}
@@ -148,7 +136,6 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FCF8' }}>
-      {/* Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ค้นหา</Text>
@@ -156,20 +143,11 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
             <Image
               source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
               style={styles.profileImage}
-              onError={(e) => {
-                console.log('Profile image load error:', e.nativeEvent.error);
-              }}
             />
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Image
-            source={require('../assets/iconamoon_search-light.png')}
-            style={styles.searchIcon}
-            resizeMode="contain"
-          />
           <TextInput
             style={styles.input}
             placeholder="ชื่อหนังสือ หรือชื่อผู้แต่ง"
@@ -181,10 +159,9 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
         </View>
       </View>
 
-      {/* แสดงผล */}
       {loading ? (
         <View style={styles.center}>
-          <Text style={styles.emptyText}>กำลังโหลด...</Text>
+          <ActivityIndicator size="small" />
         </View>
       ) : showSearchResult ? (
         filteredBooks.length > 0 ? (
@@ -210,10 +187,6 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
           <View style={styles.center}>
             <Text style={styles.emptyText}>ขออภัย</Text>
             <Text style={styles.emptyText}>ไม่เจอหนังสือที่ท่านต้องการหา</Text>
-            <Image
-              source={require('../assets/healthicons_no.png')}
-              style={[styles.emptyIcon, { tintColor: 'red' }]}
-            />
           </View>
         )
       ) : (
