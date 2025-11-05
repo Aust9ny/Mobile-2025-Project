@@ -3,11 +3,13 @@ import {
   View,
   Text,
   Image,
-  Pressable,
   ScrollView,
   Alert,
   TouchableOpacity,
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import styles from '../styles/BookDetailScreenStyle';
 import HeartIconActive from '../assets/mdi_heart.png';
@@ -25,8 +27,18 @@ export default function BookDetailScreen({ route, navigation }: any) {
   // ⭐️ 2. ดึง userToken มาจาก Context
   const { userToken } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [currentBook, setCurrentBook] = useState(book);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [bookStats, setBookStats] = useState({
+    total: 10,
+    borrowed: 0,
+    available: 10,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [userHasBorrowed, setUserHasBorrowed] = useState(false);
 
-  // 🔹 โหลดสถานะ Favorite ตอนเปิดหน้าหนังสือ
+  const bookId = currentBook.id;
+
   useEffect(() => {
     // (Logic นี้ควรจะย้ายไป fetch จาก API /api/library/favorites/mine - ซึ่งอยู่ใน library.routes.js)
     // แต่ตอนนี้เราจะยังคงใช้ AsyncStorage ไปก่อน
@@ -44,9 +56,10 @@ export default function BookDetailScreen({ route, navigation }: any) {
     loadFavoriteStatus();
   }, [book]);
 
-  // 🔹 บันทึกประวัติการเข้าชม
+  // ✅ โหลด favorite list
   useEffect(() => {
-    const addToHistory = async () => {
+    if (!userId) return;
+    const loadFavorite = async () => {
       try {
         const stored = await AsyncStorage.getItem('viewHistory');
         const history = stored ? JSON.parse(stored) : [];
@@ -65,17 +78,15 @@ export default function BookDetailScreen({ route, navigation }: any) {
           };
           history.push(historyBook);
         }
-
-        await AsyncStorage.setItem('viewHistory', JSON.stringify(history));
-      } catch (error) {
-        console.error('Error saving view history:', error);
+      } catch (err) {
+        // Silent error
+      } finally {
+        setIsLoading(false);
       }
     };
+    loadFavorite();
+  }, [bookId, userId]);
 
-    addToHistory();
-  }, [book]);
-
-  // 🔹 สลับสถานะ Favorite
   const toggleFavorite = async () => {
     // (Logic นี้ควรจะย้ายไป fetch จาก API POST /api/library/favorites/:bookId)
     // แต่ตอนนี้เราจะยังคงใช้ AsyncStorage ไปก่อน
@@ -103,10 +114,12 @@ export default function BookDetailScreen({ route, navigation }: any) {
 
       Alert.alert(
         'รายการโปรด',
-        isFavorite ? 'ลบออกจากรายการโปรดแล้ว' : 'เพิ่มลงในรายการโปรดแล้ว'
+        action === 'add' ? 'เพิ่มลงในรายการโปรดแล้ว' : 'ลบออกจากรายการโปรดแล้ว'
       );
-    } catch (error) {
-      console.error('Favorite toggle error:', error);
+    } catch (err) {
+      setIsFavorite(prev => !prev);
+      if (onFavoriteChange) onFavoriteChange(bookId, isFavorite ? 'add' : 'remove');
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     }
   };
 
@@ -128,12 +141,12 @@ export default function BookDetailScreen({ route, navigation }: any) {
     const dueDateStr = `${day} ${month} ${year} เวลา ${hours}:${minutes} น.`;
 
     Alert.alert(
-      'คุณต้องการยืมหนังสือหรือไม่?',
-      `${book.title}\n\nกำหนดคืน\n${dueDateStr}`,
+      'ยืมหนังสือ',
+      `คุณต้องการยืม "${currentBook.title}" ใช่หรือไม่?\n\nกำหนดคืน:\n${dueDateThai}`,
       [
-        { text: 'ยกเลิก', style: 'destructive' },
+        { text: 'ยกเลิก', style: 'cancel' },
         {
-          text: 'ตกลง',
+          text: 'ยืม',
           onPress: async () => {
             try {
               // ⭐️ 3. ใช้ userToken จาก useAuth() (ปลอดภัยกว่า)
@@ -163,10 +176,17 @@ export default function BookDetailScreen({ route, navigation }: any) {
             }
           },
         },
-      ],
-      { cancelable: true }
+      ]
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#115566" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -179,9 +199,20 @@ export default function BookDetailScreen({ route, navigation }: any) {
         โดย {book.author}
       </Text>
 
-      <Pressable style={styles.borrowBtn} onPress={handleBorrow}>
-        <Text style={styles.borrowText}>ยืมหนังสือเล่มนี้</Text>
-      </Pressable>
+      <TouchableOpacity 
+        style={[
+          styles.borrowButton,
+          (bookStats.available <= 0 || userHasBorrowed) && styles.borrowButtonDisabled
+        ]}
+        onPress={handleBorrowBook}
+        activeOpacity={0.8}
+        disabled={bookStats.available <= 0 || userHasBorrowed}
+      >
+        <Text style={styles.borrowButtonText}>
+          {userHasBorrowed ? 'คุณยืมหนังสือเล่มนี้อยู่แล้ว' : 
+           bookStats.available > 0 ? 'ยืมหนังสือเล่มนี้' : 'หนังสือหมด'}
+        </Text>
+      </TouchableOpacity>
 
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
@@ -189,11 +220,13 @@ export default function BookDetailScreen({ route, navigation }: any) {
           {/* ⭐️ FIX 3: ใช้ available_copies (ตาม schema) */}
           <Text style={[styles.statNumber, styles.available]}>{book.available_copies}</Text>
         </View>
+        
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ทั้งหมด</Text>
            {/* ⭐️ FIX 4: ใช้ total_copies (ตาม schema) */}
           <Text style={[styles.statNumber, styles.total]}>{book.total_copies}</Text>
         </View>
+        
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ยืมแล้ว</Text>
           {/* ⭐️ FIX 5: คำนวณยอดที่ถูกยืม (และเช็ค Error) */}
@@ -205,7 +238,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
         </View>
       </View>
 
-      <View style={styles.separator} />
+      <View style={styles.divider} />
 
       <View style={styles.summaryHeader}>
         <Text style={styles.summaryTitle}>เรื่องย่อ</Text>
@@ -218,7 +251,7 @@ export default function BookDetailScreen({ route, navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.summaryText}>{book.summary}</Text>
+      <Text style={styles.summaryText}>{currentBook.summary || 'ไม่มีเรื่องย่อ'}</Text>
     </ScrollView>
   );
 }

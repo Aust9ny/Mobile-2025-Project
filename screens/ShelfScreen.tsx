@@ -32,6 +32,8 @@ type Props = {
 };
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+const API_BASE =
+  Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
 
 export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks = [], userToken, onRefresh }: Props) {
   const insets = useSafeAreaInsets();
@@ -115,7 +117,6 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
             />
           </Pressable>
         </View>
-
         <SearchBar
           value={searchText}
           onChange={setSearchText}
