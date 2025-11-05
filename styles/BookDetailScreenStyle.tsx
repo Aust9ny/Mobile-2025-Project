@@ -1,4 +1,3 @@
-// styles/BookDetailScreenStyle.tsx
 import { StyleSheet } from 'react-native';
 
 export default StyleSheet.create({
@@ -37,63 +36,66 @@ export default StyleSheet.create({
         fontSize: 14,
         color: '#777',
         textAlign: 'center',
-        marginBottom: 12,
+        marginBottom: 20,
     },
 
-    borrowBtn: {
-        backgroundColor: '#004d61',
+    // ปุ่มยืมหนังสือ
+    borrowButton: {
+        backgroundColor: '#115566',
         marginHorizontal: 16,
         borderRadius: 50,
-        paddingVertical: 14,
+        paddingVertical: 16,
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
     },
-
-    borrowText: {
+    borrowButtonDisabled: {
+        backgroundColor: '#999',
+        opacity: 0.6,
+    },
+    borrowButtonText: {
         color: '#fff',
         fontSize: 18,
         fontWeight: '700',
     },
 
+    // สถิติหนังสือ
     statsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginHorizontal: 16,
-        marginBottom: 16,
+        marginHorizontal: 20,
+        marginBottom: 20,
+        paddingHorizontal: 10,
     },
-
     statItem: {
         alignItems: 'center',
+        flex: 1,
     },
-
     statLabel: {
         fontSize: 15,
         color: '#000',
+        fontWeight: '500',
+        marginBottom: 6,
     },
-
-    statNumber: {
-        fontSize: 18,
+    statValue: {
+        fontSize: 20,
+        color: '#000',
         fontWeight: '700',
-        marginTop: 4,
+    },
+    statValueRed: {
+        color: '#D32F2F',
     },
 
-    available: {
-        color: '#115566',
-    },
-
-    total: {
-        color: 'red',
-    },
-
-    borrowed: {
-        color: 'red',
-    },
-
-    separator: {
+    // เส้นคั่น
+    divider: {
         height: 1,
-        backgroundColor: '#ccc',
+        backgroundColor: '#d0d0d0',
         marginHorizontal: 16,
-        marginBottom: 16,
+        marginVertical: 20,
     },
 
     summaryHeader: {
@@ -101,7 +103,7 @@ export default StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginHorizontal: 16,
-        marginBottom: 8,
+        marginBottom: 12,
     },
 
     summaryTitle: {
@@ -116,23 +118,25 @@ export default StyleSheet.create({
         padding: 4,
     },
 
-    favoriteText: {
-        fontSize: 16,
-        color: '#115566',
-        marginLeft: 8,
-    },
-
     favoriteIcon: {
-        width: 30,
-        height: 30,
+        width: 28,
+        height: 28,
         resizeMode: 'contain',
     },
 
+    favoriteText: {
+        fontSize: 15,
+        color: '#115566',
+        marginLeft: 6,
+        fontWeight: '600',
+    },
+
     summaryText: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#333',
-        lineHeight: 22,
+        lineHeight: 24,
         marginHorizontal: 16,
-        marginBottom: 24,
+        marginBottom: 30,
+        textAlign: 'justify',
     },
 });
