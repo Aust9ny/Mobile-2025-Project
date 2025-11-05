@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from '../styles/SearchScreenStyle';
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+// 🔹 รูปภาพ fallback สำหรับปกหนังสือที่โหลดไม่สำเร็จ
+const DEFAULT_BOOK_COVER = 'https://via.placeholder.com/150x200/386156/FFFFFF?text=No+Cover';
 
 export default function SearchScreen({ userProfile }: { userProfile?: { photoURL?: string } }) {
   const navigation = useNavigation<any>();
@@ -22,10 +24,7 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
   const [showSearchResult, setShowSearchResult] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 🔹 แก้เป็น URL backend จริงของคุณ
-  // Android Emulator: 10.0.2.2:4000
-  // iOS Simulator: localhost:4000
-  // มือถือจริง: IP ของเครื่อง server
+  // 🔹 URL backend จริงของคุณ
   const API_URL = 'http://10.0.2.2:4000/api/books/search';
 
   // 🔹 debounce function
@@ -37,6 +36,25 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
     };
   };
 
+  // 🔹 ฟังก์ชันตรวจสอบและแก้ไข URL รูปภาพ
+  const getValidImageUrl = (url: string | null | undefined): string | null => {
+    if (!url || url.trim() === '') {
+      return DEFAULT_BOOK_COVER; // ถ้าไม่มี URL ให้ใช้ภาพ fallback
+    }
+
+    // ถ้าเป็น path (เช่น /uploads/book.jpg) ให้เติม domain
+    if (url.startsWith('/')) {
+      return `http://10.0.2.2:4000${url}`;
+    }
+
+    // ถ้าไม่มี http/https ให้เติม http://10.0.2.2:4000/
+    if (!/^https?:\/\//i.test(url)) {
+      return `http://10.0.2.2:4000/${url}`;
+    }
+
+    return url;
+  };
+
   // 🔹 fetch books
   const fetchBooks = async (query: string) => {
     setLoading(true);
@@ -44,7 +62,14 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       const res = await fetch(`${API_URL}?q=${encodeURIComponent(query)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setFilteredBooks(data.books || []);
+
+      // 🔹 ตรวจสอบและแก้ไข URL รูปภาพของหนังสือทุกเล่ม
+      const booksWithValidCovers = (data.books || []).map((book: any) => ({
+        ...book,
+        cover: getValidImageUrl(book.cover),
+      }));
+
+      setFilteredBooks(booksWithValidCovers);
     } catch (err) {
       console.error('Fetch error:', err);
       setFilteredBooks([]);
@@ -82,9 +107,20 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       style={styles.searchFirstBookContainer}
       onPress={() => navigation.navigate('BookDetail', { book })}
     >
-      <Image source={{ uri: book.cover }} style={styles.searchFirstBookCover} />
-      <Text style={styles.searchFirstBookTitle}>{book.title}</Text>
-      <Text style={styles.searchFirstBookAuthor}>{book.author}</Text>
+      <Image
+        source={{ uri: book.cover || DEFAULT_BOOK_COVER }}
+        style={styles.searchFirstBookCover}
+        onError={() => {
+          console.log('Image load error for first book:', book.title);
+          book.cover = DEFAULT_BOOK_COVER;
+        }}
+      />
+      <Text style={styles.searchFirstBookTitle} numberOfLines={2}>
+        {book.title || 'ไม่มีชื่อหนังสือ'}
+      </Text>
+      <Text style={styles.searchFirstBookAuthor} numberOfLines={1}>
+        {book.author || 'ไม่ทราบผู้แต่ง'}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -93,9 +129,20 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
       style={[styles.genreBookCard, { marginRight: (index + 1) % 3 === 0 ? 0 : 8 }]}
       onPress={() => navigation.navigate('BookDetail', { book: item })}
     >
-      <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
-      <Text style={styles.genreBookTitle}>{item.title}</Text>
-      <Text style={styles.genreBookAuthor}>{item.author}</Text>
+      <Image
+        source={{ uri: item.cover || DEFAULT_BOOK_COVER }}
+        style={styles.genreBookCover}
+        onError={() => {
+          console.log('Image load error:', item.title);
+          item.cover = DEFAULT_BOOK_COVER;
+        }}
+      />
+      <Text style={styles.genreBookTitle} numberOfLines={2}>
+        {item.title || 'ไม่มีชื่อหนังสือ'}
+      </Text>
+      <Text style={styles.genreBookAuthor} numberOfLines={1}>
+        {item.author || 'ไม่ทราบผู้แต่ง'}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -109,6 +156,9 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
             <Image
               source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
               style={styles.profileImage}
+              onError={(e) => {
+                console.log('Profile image load error:', e.nativeEvent.error);
+              }}
             />
           </TouchableOpacity>
         </View>
@@ -142,7 +192,11 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
             data={filteredBooks.slice(1)}
             keyExtractor={(item) => item.id.toString()}
             numColumns={3}
-            columnWrapperStyle={{ justifyContent: 'flex-start', paddingHorizontal: 16, marginTop: 16 }}
+            columnWrapperStyle={{
+              justifyContent: 'flex-start',
+              paddingHorizontal: 16,
+              marginTop: 16,
+            }}
             renderItem={renderGridBook}
             ListHeaderComponent={
               <>
@@ -167,7 +221,11 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
           data={filteredBooks}
           keyExtractor={(item) => item.id.toString()}
           numColumns={3}
-          columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 8, marginTop: 16 }}
+          columnWrapperStyle={{
+            justifyContent: 'space-between',
+            paddingHorizontal: 8,
+            marginTop: 16,
+          }}
           renderItem={renderGridBook}
           contentContainerStyle={{ paddingBottom: 100 }}
         />
