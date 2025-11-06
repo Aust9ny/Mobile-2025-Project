@@ -51,13 +51,18 @@ const getTempUserId = async () => {
 const logBookView = async (bookId: string, userId: string | null | undefined) => {
   const effectiveUserId = userId || await getTempUserId();
   try {
-    await fetch(`${API_URL}/api/books/mock/${bookId}/view`, {
+    const response = await fetch(`${API_URL}/api/books/mock/${bookId}/view`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: effectiveUserId }),
     });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`📖 [View Logged] Book: ${bookId}, User View Count: ${data.data?.userViewCount}`);
+    }
   } catch (err) {
-    console.error('❌ Log view error:', err);
+    console.error('⌛ Log view error:', err);
   }
 };
 

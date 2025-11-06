@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'; // 👈 1. Import useEffect
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,133 +7,150 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Platform
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native'; // 👈 2. ลบ useFocusEffect
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// --- Import ไฟล์ใหม่ ---
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import BookInteractionModal from '../components/BookInteractionModal';
 import SearchBar from '../components/SearchBar';
-import ShelfBookCard from '../components/BookCard'; // 👈 3. Import Card ใหม่
-import { returnBook, extendBook } from '../services/BorrowService'; // 👈 4. Import Service
-import { canExtend } from '../utils/BookHelper'; // 👈 5. Import Helper
-// ---
-
 import NoIcon from '../assets/healthicons_no.png';
 import styles, { cardWidth } from '../styles/ShelfScreenStyle';
 
-type Props = {
-  userProfile?: { photoURL?: string };
-  isLoading?: boolean;
-  shelfBooks?: any[];
-  userToken?: string | null;
-  onRefresh?: () => void;
+const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+const API_BASE = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
+
+const getTempUserId = async () => {
+  try {
+    let tempUserId = await AsyncStorage.getItem('temp_user_id');
+    if (!tempUserId) {
+      tempUserId = `temp_user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await AsyncStorage.setItem('temp_user_id', tempUserId);
+    }
+    return tempUserId;
+  } catch {
+    return `guest_${Date.now()}`;
+  }
 };
 
-const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-
-export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks = [], userToken, onRefresh }: Props) {
+export default function ShelfScreen({ userProfile, isLoading = false }: any) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const [list, setList] = useState<any[]>(shelfBooks); // 👈 6. Sync state ด้วย useEffect
+  const [borrowHistory, setBorrowHistory] = useState<any[]>([]);
   const [searchText, setSearchText] = useState('');
   const [active, setActive] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // 👈 7. ใช้ useEffect ในการ Sync state เมื่อ prop เปลี่ยน
-  useEffect(() => {
-    setList(shelfBooks);
-  }, [shelfBooks]);
-
-  // 👈 8. Logic คืนหนังสือ (เรียก Service)
-  const handleReturn = async (id: string) => {
+  // ✅ โหลดประวัติการยืมจาก database
+  const loadBorrowHistory = async () => {
     try {
-      await returnBook(id, userToken!); // เรียกใช้ Service
-      Alert.alert('สำเร็จ', 'คืนหนังสือเรียบร้อยแล้ว');
-      setModalVisible(false);
-      onRefresh?.();
-    } catch (e: any) {
-      console.error('Return failed:', e);
-      Alert.alert('ผิดพลาด', e.message || 'คืนหนังสือไม่สำเร็จ');
-    }
-  };
+      setLoading(true);
+      const userId = await getTempUserId();
 
-  // 👈 9. Logic ยืมต่อ (เรียก Service)
-  // ฟังก์ชันเช็คว่ายืมต่อได้หรือไม่
-  const canExtend = (book: any) => {
-    const dueDate = new Date(book.dueDate);
-    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    return daysLeft <= 3 && !book.extended;
-  };
-
-  // คืนหนังสือ
-  const handleReturn = async (id: string) => {
-    try {
-      const res = await fetch(`${API_URL}/borrows/${id}/return`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` || '' },
-      });
-      if (!res.ok) throw new Error('Return failed');
-      setModalVisible(false);
-      onRefresh?.();
-    } catch (e) {
-      alert('Return failed.');
-    }
-  };
-
-  // ยืมต่อหนังสือ
-  const handleExtend = async (id: string) => {
-    try {
-      const target = list.find(b => (b.id ?? b.book_id) === id);
-      if (!target || !canExtend(target)) { // ใช้ Helper
-        Alert.alert('ผิดพลาด', 'ไม่สามารถยืมต่อได้ (อาจจะยืมต่อไปแล้ว หรือยังไม่ถึงเวลา)');
-        return;
-      }
+      // ⭐️ เรียก API เพื่อดึงข้อมูลการยืมจาก database
+      const response = await fetch(`${API_BASE}/api/borrows/user/${userId}`);
       
-      await extendBook(id, userToken!); // เรียกใช้ Service
-      Alert.alert('สำเร็จ', 'ยืมต่อหนังสือเรียบร้อยแล้ว');
-      setModalVisible(false);
-      onRefresh?.();
-    } catch (e: any) {
-      console.error('Extend failed:', e);
-      Alert.alert('ผิดพลาด', e.message || 'ยืมต่อไม่สำเร็จ');
+      if (!response.ok) {
+        throw new Error('Failed to fetch borrow history');
+      }
+
+      const data = await response.json();
+      setBorrowHistory(data.borrows || []);
+    } catch (error) {
+      console.error('Error loading borrow history:', error);
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถโหลดประวัติการยืมได้');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 👈 10. Filter logic (เหมือนเดิม แต่ใช้ list ที่ sync แล้ว)
-  const filtered = useMemo(() => {
-    if (!searchText) return list;
-    const s = searchText.toLowerCase();
-    return list.filter(
-      (b) =>
-        ((b.title ?? b.book_title ?? '') as string).toLowerCase().includes(s) ||
-        ((b.author ?? b.book_author ?? '') as string).toLowerCase().includes(s)
-    );
-  }, [list, searchText]);
-
-  // 👈 11. Render การ์ดหนังสือ (ใช้ Component ใหม่)
-  const renderItem = ({ item }: { item: any }) => (
-    <ShelfBookCard
-      item={item}
-      onPress={() => {
-        // book_id vs id: ส่ง ID ที่ถูกต้องไปยัง Modal
-        const activeBookId = item.id ?? item.book_id;
-        setActive({ ...item, id: activeBookId }); // ตรวจสอบให้แน่ใจว่า 'active' มี 'id' ที่ถูกต้อง
-        setModalVisible(true);
-      }}
-    />
+  useFocusEffect(
+    useCallback(() => {
+      loadBorrowHistory();
+    }, [])
   );
 
-  return (
-    <View style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
-      {/* Header (เหมือนเดิม) */}
-  // Render การ์ดหนังสือ
+  // ✅ คืนหนังสือ
+  const handleReturn = async (bookId: string) => {
+    try {
+      const userId = await getTempUserId();
+
+      const response = await fetch(`${API_BASE}/api/borrows/mock/${bookId}/return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('ไม่สำเร็จ', data.error || 'เกิดข้อผิดพลาด');
+        return;
+      }
+
+      // โหลดข้อมูลใหม่
+      await loadBorrowHistory();
+
+      Alert.alert('สำเร็จ', 'คืนหนังสือเรียบร้อยแล้ว');
+    } catch (error) {
+      console.error('Error returning book:', error);
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถคืนหนังสือได้');
+    }
+  };
+
+  // ✅ ยืมต่อ
+  const handleExtend = async (bookId: string) => {
+    try {
+      const userId = await getTempUserId();
+
+      const response = await fetch(`${API_BASE}/api/borrows/mock/${bookId}/extend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('ไม่สำเร็จ', data.error || 'เกิดข้อผิดพลาด');
+        return;
+      }
+
+      // โหลดข้อมูลใหม่
+      await loadBorrowHistory();
+
+      const newDueDate = new Date(data.newDueDate);
+      const thaiMonths = [
+        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+      ];
+      const dueDateStr = `${newDueDate.getDate()} ${thaiMonths[newDueDate.getMonth()]} ${newDueDate.getFullYear() + 543}`;
+
+      Alert.alert('สำเร็จ', `ยืมต่อหนังสือเรียบร้อยแล้ว!\nกำหนดคืนใหม่: ${dueDateStr}`);
+    } catch (error) {
+      console.error('Error extending borrow:', error);
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถยืมต่อได้');
+    }
+  };
+
+  const filtered = useMemo(() => {
+    if (!searchText) return borrowHistory;
+    const s = searchText.toLowerCase();
+    return borrowHistory.filter(
+      (b) =>
+        (b.title ?? '').toLowerCase().includes(s) ||
+        (b.author ?? '').toLowerCase().includes(s)
+    );
+  }, [borrowHistory, searchText]);
+
   const renderItem = ({ item }: { item: any }) => {
-    const borrowDate = new Date(item.borrow_date ?? item.borrowDate);
-    const dueDate = new Date(item.due_date ?? item.dueDate);
-    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const borrowDate = new Date(item.borrow_date);
+    const dueDate = new Date(item.due_date);
+    const now = new Date();
+    const daysLeft = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     const isOverdue = daysLeft < 0;
+    const canExtend = !item.extended && daysLeft <= 3;
 
     return (
       <Pressable
@@ -146,15 +163,19 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         {item.cover ? (
           <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
         ) : (
-          <View style={[styles.genreBookCover, { backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }]}>
+          <View
+            style={[
+              styles.genreBookCover,
+              { backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' },
+            ]}
+          >
             <Text style={{ fontSize: 12, color: '#666' }}>No Cover</Text>
           </View>
         )}
-        <Text style={styles.genreBookTitle}>{item.title ?? item.book_title ?? ''}</Text>
-        <Text style={styles.genreBookAuthor}>{item.author ?? item.book_author ?? ''}</Text>
-
+        <Text style={styles.genreBookTitle}>{item.title ?? ''}</Text>
+        <Text style={styles.genreBookAuthor}>{item.author ?? ''}</Text>
         <Text style={{ fontSize: 12, color: 'gray', marginTop: 2 }}>
-          ยืมวันที่: {borrowDate.toLocaleDateString()}
+          ยืมวันที่: {borrowDate.toLocaleDateString('th-TH')}
         </Text>
         <Text
           style={{
@@ -164,11 +185,18 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
             fontWeight: '600',
           }}
         >
-          {isOverdue ? 'สิ้นสุดการยืม' : `เหลือเวลาอีก ${daysLeft} วัน`}
+          {isOverdue
+            ? `⚠️ เกินกำหนดคืนแล้ว ${Math.abs(daysLeft)} วัน`
+            : `📅 เหลือเวลาอีก ${daysLeft} วัน`}
         </Text>
-        {canExtend(item) && !isOverdue && (
+        {canExtend && (
           <Text style={{ fontSize: 12, color: 'blue', marginTop: 2 }}>
-            สามารถยืมต่อได้
+            💡 ยืมต่อได้อีก 7 วัน
+          </Text>
+        )}
+        {item.extended && (
+          <Text style={{ fontSize: 11, color: 'orange', marginTop: 2 }}>
+            ✓ ยืมต่อแล้ว
           </Text>
         )}
       </Pressable>
@@ -177,7 +205,6 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
-      {/* Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
@@ -188,7 +215,6 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
             />
           </Pressable>
         </View>
-
         <SearchBar
           value={searchText}
           onChange={setSearchText}
@@ -196,10 +222,9 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         />
       </View>
 
-      {/* Content */}
-      {isLoading ? (
+      {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="large" color="#115566" />
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.center}>
@@ -210,22 +235,37 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(i) => (i.id ?? i.book_id ?? Math.random()).toString()}
-          renderItem={renderItem} // 👈 12. ใช้ renderItem ที่สะอาดขึ้น
+          keyExtractor={(i) => i.id?.toString() ?? Math.random().toString()}
+          renderItem={renderItem}
           numColumns={3}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 4 }}
         />
       )}
 
-      {/* Modal */}
       <BookInteractionModal
         visible={modalVisible}
         book={active}
         onClose={() => setModalVisible(false)}
-        onReturn={handleReturn}
-        onExtend={handleExtend}
-        canExtend={active ? canExtend(active) : false} // 👈 13. ใช้ helper ที่ import มา
+        onReturn={async (id: string) => {
+          await handleReturn(id);
+          setModalVisible(false);
+        }}
+        onExtend={async (id: string) => {
+          await handleExtend(id);
+          setModalVisible(false);
+        }}
+        canExtend={
+          active
+            ? (() => {
+                const dueDate = new Date(active.due_date);
+                const daysLeft = Math.ceil(
+                  (dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                );
+                return !active.extended && daysLeft <= 3;
+              })()
+            : false
+        }
       />
     </View>
   );

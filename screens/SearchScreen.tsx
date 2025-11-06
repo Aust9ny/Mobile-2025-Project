@@ -8,13 +8,53 @@ import {
   TouchableOpacity,
   Keyboard,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from '../styles/SearchScreenStyle';
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 const DEFAULT_BOOK_COVER = 'https://via.placeholder.com/150x200/386156/FFFFFF?text=No+Cover';
+
+const getBackendHost = () =>
+  Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
+
+// ✅ ฟังก์ชัน getTempUserId
+const getTempUserId = async () => {
+  try {
+    let tempUserId = await AsyncStorage.getItem('temp_user_id');
+    if (!tempUserId) {
+      tempUserId = `temp_user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await AsyncStorage.setItem('temp_user_id', tempUserId);
+    }
+    return tempUserId;
+  } catch (error) {
+    return `guest_${Date.now()}`;
+  }
+};
+
+// ✅ ฟังก์ชัน logBookView - บันทึกการดูหนังสือลง database
+const logBookView = async (bookId: string) => {
+  try {
+    const userId = await getTempUserId();
+    const backend = getBackendHost();
+    
+    const response = await fetch(`${backend}/api/books/mock/${bookId}/view`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`📖 [View Logged] Book ID: ${bookId}, View Count: ${data.data?.totalViews}`);
+    }
+  } catch (err) {
+    console.error('Error logging book view:', err);
+  }
+};
 
 export default function SearchScreen({ userProfile }: { userProfile?: { photoURL?: string } }) {
   const navigation = useNavigation<any>();
@@ -24,7 +64,7 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
   const [showSearchResult, setShowSearchResult] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = 'http://10.0.2.2:4000/api/books/search';
+  const API_URL = getBackendHost();
 
   // ------------------ Helper ------------------
   const debounce = (func: (...args: any[]) => void, delay: number) => {
@@ -37,8 +77,8 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
 
   const getValidImageUrl = (url: string | null | undefined): string => {
     if (!url || url.trim() === '') return DEFAULT_BOOK_COVER;
-    if (url.startsWith('/')) return `http://10.0.2.2:4000${url}`;
-    if (!/^https?:\/\//i.test(url)) return `http://10.0.2.2:4000/${url}`;
+    if (url.startsWith('/')) return `${API_URL}${url}`;
+    if (!/^https?:\/\//i.test(url)) return `${API_URL}/${url}`;
     return url;
   };
 
@@ -48,21 +88,23 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
     );
   };
 
-  // ------------------ Fetch ------------------
+  // ------------------ Fetch Books ------------------
   const fetchBooks = async (query: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${API_URL}/api/books/search?q=${encodeURIComponent(query)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      // ✅ ที่ถูกต้องคือเตรียม URL ให้เสร็จในขั้นตอนนี้
+      // ✅ เตรียม URL ให้เสร็จในขั้นตอนนี้
       const booksWithValidCovers = (data.books || []).map((book: any) => ({
         ...book,
         cover: getValidImageUrl(book.cover),
       }));
 
       setFilteredBooks(booksWithValidCovers);
+      
+      console.log(`🔍 [Search] Query: "${query}" → ${booksWithValidCovers.length} results`);
     } catch (err) {
       console.error('Fetch error:', err);
       setFilteredBooks([]);
@@ -73,10 +115,12 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
 
   const debouncedFetchBooks = useCallback(debounce(fetchBooks, 400), []);
 
+  // โหลดหนังสือทั้งหมดตอนเริ่มต้น
   useEffect(() => {
     fetchBooks('');
   }, []);
 
+  // ค้นหาเมื่อ searchText เปลี่ยน
   useEffect(() => {
     if (searchText.trim() === '') {
       setShowSearchResult(false);
@@ -92,15 +136,23 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
     setShowSearchResult(true);
   };
 
+  // ✅ ฟังก์ชันจัดการเมื่อกดดูหนังสือ
+  const handleBookPress = async (book: any) => {
+    // บันทึกการดูลง database
+    await logBookView(book.id);
+    
+    // ไปหน้า BookDetail
+    navigation.navigate('BookDetail', { book });
+  };
+
   // ------------------ Render ------------------
   const renderFirstBook = (book: any) => (
     <TouchableOpacity
       key={book.id}
       style={styles.searchFirstBookContainer}
-      onPress={() => navigation.navigate('BookDetail', { book })}
+      onPress={() => handleBookPress(book)} // ✅ ใช้ handleBookPress
     >
       <Image
-        // ✅ ใช้ book.cover โดยตรง
         source={{ uri: book.cover }}
         style={styles.searchFirstBookCover}
         onError={() => handleImageError(book.id)}
@@ -117,10 +169,9 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
   const renderGridBook = ({ item, index }: { item: any; index: number }) => (
     <TouchableOpacity
       style={[styles.genreBookCard, { marginRight: (index + 1) % 3 === 0 ? 0 : 8 }]}
-      onPress={() => navigation.navigate('BookDetail', { book: item })}
+      onPress={() => handleBookPress(item)} // ✅ ใช้ handleBookPress
     >
       <Image
-        // ✅ ใช้ item.cover โดยตรง
         source={{ uri: item.cover }}
         style={styles.genreBookCover}
         onError={() => handleImageError(item.id)}
@@ -136,6 +187,7 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FCF8' }}>
+      {/* Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ค้นหา</Text>
@@ -147,6 +199,7 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
           </TouchableOpacity>
         </View>
 
+        {/* Search Bar */}
         <View style={styles.searchBar}>
           <TextInput
             style={styles.input}
@@ -159,9 +212,11 @@ export default function SearchScreen({ userProfile }: { userProfile?: { photoURL
         </View>
       </View>
 
+      {/* Content */}
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="small" />
+          <ActivityIndicator size="large" color="#115566" />
+          <Text style={{ marginTop: 10, color: '#666' }}>กำลังค้นหา...</Text>
         </View>
       ) : showSearchResult ? (
         filteredBooks.length > 0 ? (
