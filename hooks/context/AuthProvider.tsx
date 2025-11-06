@@ -12,6 +12,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  isAuthReady: null,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -28,7 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading , isAuthReady: !loading }}>
       {children}
     </AuthContext.Provider>
   );
