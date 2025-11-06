@@ -32,8 +32,6 @@ type Props = {
 };
 
 const DEFAULT_PROFILE = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-const API_BASE =
-  Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000';
 
 export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks = [], userToken, onRefresh }: Props) {
   const insets = useSafeAreaInsets();
@@ -62,6 +60,29 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
   };
 
   // 👈 9. Logic ยืมต่อ (เรียก Service)
+  // ฟังก์ชันเช็คว่ายืมต่อได้หรือไม่
+  const canExtend = (book: any) => {
+    const dueDate = new Date(book.dueDate);
+    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return daysLeft <= 3 && !book.extended;
+  };
+
+  // คืนหนังสือ
+  const handleReturn = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/borrows/${id}/return`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` || '' },
+      });
+      if (!res.ok) throw new Error('Return failed');
+      setModalVisible(false);
+      onRefresh?.();
+    } catch (e) {
+      alert('Return failed.');
+    }
+  };
+
+  // ยืมต่อหนังสือ
   const handleExtend = async (id: string) => {
     try {
       const target = list.find(b => (b.id ?? b.book_id) === id);
@@ -107,6 +128,56 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
   return (
     <View style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
       {/* Header (เหมือนเดิม) */}
+  // Render การ์ดหนังสือ
+  const renderItem = ({ item }: { item: any }) => {
+    const borrowDate = new Date(item.borrow_date ?? item.borrowDate);
+    const dueDate = new Date(item.due_date ?? item.dueDate);
+    const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const isOverdue = daysLeft < 0;
+
+    return (
+      <Pressable
+        onPress={() => {
+          setActive(item);
+          setModalVisible(true);
+        }}
+        style={{ width: cardWidth, margin: 4 }}
+      >
+        {item.cover ? (
+          <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
+        ) : (
+          <View style={[styles.genreBookCover, { backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ fontSize: 12, color: '#666' }}>No Cover</Text>
+          </View>
+        )}
+        <Text style={styles.genreBookTitle}>{item.title ?? item.book_title ?? ''}</Text>
+        <Text style={styles.genreBookAuthor}>{item.author ?? item.book_author ?? ''}</Text>
+
+        <Text style={{ fontSize: 12, color: 'gray', marginTop: 2 }}>
+          ยืมวันที่: {borrowDate.toLocaleDateString()}
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            color: isOverdue ? 'red' : 'green',
+            marginTop: 2,
+            fontWeight: '600',
+          }}
+        >
+          {isOverdue ? 'สิ้นสุดการยืม' : `เหลือเวลาอีก ${daysLeft} วัน`}
+        </Text>
+        {canExtend(item) && !isOverdue && (
+          <Text style={{ fontSize: 12, color: 'blue', marginTop: 2 }}>
+            สามารถยืมต่อได้
+          </Text>
+        )}
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#f7f7fb' }}>
+      {/* Header */}
       <View style={[styles.customHeader, { paddingTop: insets.top }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>ชั้นหนังสือ</Text>
@@ -117,6 +188,7 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
             />
           </Pressable>
         </View>
+
         <SearchBar
           value={searchText}
           onChange={setSearchText}
@@ -124,7 +196,7 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         />
       </View>
 
-      {/* Content (เหมือนเดิม) */}
+      {/* Content */}
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="small" />
@@ -146,7 +218,7 @@ export default function ShelfScreen({ userProfile, isLoading = false, shelfBooks
         />
       )}
 
-      {/* Modal (เหมือนเดิม) */}
+      {/* Modal */}
       <BookInteractionModal
         visible={modalVisible}
         book={active}
