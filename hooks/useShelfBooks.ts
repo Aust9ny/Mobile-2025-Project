@@ -1,136 +1,83 @@
-// hooks/useShelfBooks.ts
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import API_URL from '../config/apiConfig';
+import { useAuth } from '../hooks/context/AuthContext';
+import { generateAuthHeaders } from '../utils/AuthHelper';
+import { Platform } from 'react-native';
 
-const API_URL = 'http://localhost:4000/api'; // Update with your backend URL
+const DEFAULT_COVER_URL = 'https://via.placeholder.com/150x200/386156/FFFFFF?text=No+Cover';
 
-type ShelfBook = {
-  id: string;
-  book_id?: string;
-  user_id?: string;
-  title?: string;
-  author?: string;
-  genre?: string;
-  summary?: string;
-  borrow_date?: Date;
-  due_date?: Date;
-  return_date?: Date;
-  status?: 'borrowed' | 'returned' | 'overdue';
+const getBackendHost = () => {
+    if (Platform.OS === 'android') return API_URL;
+    return 'http://localhost:4000';
 };
 
-export default function useShelfBooks(userId: string | null, token: string | null, isAuthReady: boolean) {
-  const [shelfBooks, setShelfBooks] = useState<ShelfBook[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * Custom Hook เพื่อดึงรายการหนังสือที่ผู้ใช้กำลังยืมอยู่
+ */
+export default function useShelfData() {
+    const { userToken } = useAuth();
+    const [shelfBooks, setShelfBooks] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const fetchShelfBooks = async () => {
-    if (!userId || !token || !isAuthReady) {
-      setShelfBooks([]);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await fetch(`${API_URL}/borrows/user/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+    // ⭐️ ลบ Argument 'res' ออก เนื่องจากไม่มีการส่งเข้ามาจาก useEffect
+    const fetchBooks = async () => { 
+        if (!userToken) {
+            setShelfBooks([]); // ล้างรายการถ้าไม่มี Token
+            return;
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch borrowed books');
-      }
-      
-      const data = await response.json();
-      const books = data.borrows || [];
-      
-      // Convert date strings to Date objects and sort
-      const processedBooks = books.map((book: any) => ({
-        ...book,
-        borrow_date: book.borrow_date ? new Date(book.borrow_date) : null,
-        due_date: book.due_date ? new Date(book.due_date) : null,
-        return_date: book.return_date ? new Date(book.return_date) : null,
-      }));
-      
-      // Sort by due date ascending (overdue first)
-      processedBooks.sort((a, b) => {
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return a.due_date.getTime() - b.due_date.getTime();
-      });
-      
-      setShelfBooks(processedBooks);
-    } catch (err: any) {
-      console.error('Error fetching shelf books:', err);
-      setError(err.message);
-      setShelfBooks([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchShelfBooks();
-  }, [userId, token, isAuthReady]);
+        setIsLoading(true);
+        try {
+            const backend = getBackendHost();
+            const headers = generateAuthHeaders(userToken); 
+            
+            // 1. เรียก API
+            const res = await fetch(`${backend}/api/borrows/current`, { headers });
+            
+            if (res.status === 401) {
+                console.error("Authentication expired or invalid for shelf fetch.");
+                setShelfBooks([]);
+                return;
+            }
 
-  const refreshBooks = () => {
-    fetchShelfBooks();
-  };
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'Failed to fetch shelf data.');
+            }
 
-  const borrowBook = async (bookId: string) => {
-    if (!token) return false;
-    
-    try {
-      const response = await fetch(`${API_URL}/borrows`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ book_id: bookId })
-      });
-      
-      if (response.ok) {
-        await refreshBooks();
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error borrowing book:', error);
-      return false;
-    }
-  };
+            const data = await res.json();
+            
+            // 2. 🎯 สำคัญ: Mapping cover_url -> cover และ summary -> description
+            const mappedShelfBooks = data.map((item: any) => ({
+                ...item,
+                // แมป Field จาก DB (cover_url) ไปยัง Field ที่ Frontend ใช้ (cover)
+                cover: item.cover_url || item.cover || DEFAULT_COVER_URL, 
+                // แมป Summary ไปยัง Description (ถ้าจำเป็น)
+                description: item.summary || item.description,
+            }));
+            
+            setShelfBooks(mappedShelfBooks);
 
-  const returnBook = async (borrowId: string) => {
-    if (!token) return false;
-    
-    try {
-      const response = await fetch(`${API_URL}/borrows/${borrowId}/return`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
+        } catch (error) {
+            console.error("Error fetching shelf data:", error);
+            setShelfBooks([]);
+        } finally {
+            setIsLoading(false);
         }
-      });
-      
-      if (response.ok) {
-        await refreshBooks();
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error returning book:', error);
-      return false;
-    }
-  };
+    };
 
-  return { 
-    shelfBooks, 
-    isLoading, 
-    error,
-    refreshBooks,
-    borrowBook,
-    returnBook
-  };
+    // Trigger การ Fetch เมื่อ Token เปลี่ยน หรือเมื่อมีการเรียก fetchBooks (ผ่าน refreshTrigger)
+    useEffect(() => {
+        fetchBooks();
+    }, [userToken, refreshTrigger]); 
+
+    // ฟังก์ชันสำหรับเรียก refresh จากภายนอก
+    const triggerRefresh = () => setRefreshTrigger(prev => prev + 1);
+
+    return { 
+        shelfBooks, 
+        isLoading, 
+        fetchBooks: triggerRefresh, // ส่ง triggerRefresh ออกไปในชื่อ fetchBooks
+    };
 }

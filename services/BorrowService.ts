@@ -1,42 +1,70 @@
 import API_URL from '../config/apiConfig';
-
-/**
- * คืนหนังสือ (POST /api/borrows/:bookId/return)
- */
-export const returnBook = async (bookId: string, token: string | null) => {
-  // ⭐️ FIX: ใช้ ${API_URL} และเพิ่ม /api
-  const res = await fetch(`${API_URL}/api/borrows/${bookId}/return`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` || '',
-    },
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error || 'Return failed');
-  }
-  return data;
+import { generateAuthHeaders } from '../utils/AuthHelper'; // ⭐️ สมมติว่าสร้าง helper นี้เพื่อสร้าง headers
+import { Platform } from 'react-native';
+const getBackendHost = () => {
+    // ใช้ API_URL ที่มาจาก config
+    if (Platform.OS === 'android') return API_URL;
+    return 'http://localhost:4000';
 };
 
 /**
- * ยืมหนังสือต่อ (POST /api/borrows/:bookId/extend)
+ * ฟังก์ชันคืนหนังสือ
+ * @param {string} borrowId - ID ของ record การยืมในตาราง borrows
+ * @param {string} token - JWT Token
  */
-export const extendBook = async (bookId: string, token: string | null) => {
-  // ⭐️ FIX: ใช้ ${API_URL} และเพิ่ม /api
-  const res = await fetch(`${API_URL}/api/borrows/${bookId}/extend`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` || '',
-    },
-    // ⭐️ FIX: ลบ body ที่ไม่จำเป็น (API เราคำนวณวันหมดอายุเอง)
-  });
+export const returnBook = async (borrowId, token) => {
+    if (!token) throw new Error("Authentication token is missing.");
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error || 'Extend failed');
-  }
-  return data;
+    const backend = getBackendHost();
+    const headers = generateAuthHeaders(token);
+    
+    // POST /api/borrows/return/:borrowId
+    const res = await fetch(`${backend}/api/borrows/return/${borrowId}`, {
+        method: 'POST',
+        headers: headers,
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+        throw new Error(data.message || 'Failed to return book.');
+    }
+    
+    return data;
 };
+
+/**
+ * ฟังก์ชันยืมต่อหนังสือ
+ * @param {string} borrowId - ID ของ record การยืมในตาราง borrows
+ * @param {string} token - JWT Token
+ */
+export const extendBook = async (borrowId, token) => {
+    if (!token) throw new Error("Authentication token is missing.");
+
+    const backend = getBackendHost();
+    const headers = generateAuthHeaders(token);
+
+    // POST /api/borrows/renew/:borrowId
+    const res = await fetch(`${backend}/api/borrows/renew/${borrowId}`, {
+        method: 'POST',
+        headers: headers,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        throw new Error(data.message || 'Failed to extend book.');
+    }
+
+    return data;
+};
+
+// ⭐️ ต้องมี AuthHelper.js สำหรับการสร้าง headers ใน service
+// เนื่องจาก Service Files ไม่ใช่ Component จึงใช้ useAuth() โดยตรงไม่ได้
+// คุณจะต้องสร้างไฟล์นี้ขึ้นมาเอง
+/* // ตัวอย่าง utils/AuthHelper.js:
+    export const generateAuthHeaders = (token, contentType = 'application/json') => ({
+        'Content-Type': contentType,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    });
+*/

@@ -2,6 +2,7 @@
   "expo": {
     "name": "library-frontend",
     "slug": "library-frontend",
+    "scheme": "lendme",
     "android": {
       "package": "com.lendme.library"
     },

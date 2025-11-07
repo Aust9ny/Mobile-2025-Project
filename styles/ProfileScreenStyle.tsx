@@ -10,17 +10,25 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // Header แบบเต็ม ไม่มีช่องว่างสีขาว
+  // Header (FIXED: เพิ่ม 'row' และ 'space-between' เพื่อรองรับปุ่ม 'แก้ไข')
   header: {
     backgroundColor: '#115566',
     paddingVertical: 40,
     paddingHorizontal: 40,
-    flexDirection: 'row',
+    flexDirection: 'row', // 👈 1. เปลี่ยนเป็น row
+    justifyContent: 'space-between', // 👈 2. เพิ่ม
+    alignItems: 'center', // 👈 3. เพิ่ม
     width: '100%',
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
+    color: '#B0BA1D',
+  },
+  // ⭐️ NEW: สไตล์สำหรับปุ่ม "แก้ไข" / "บันทึก"
+  editButton: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#B0BA1D',
   },
 
@@ -57,15 +65,21 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     width: '100%',
   },
+  // ⭐️ NEW: สไตล์สำหรับช่อง Input ที่ "กำลังแก้ไข"
+  inputFieldEditing: {
+    backgroundColor: 'rgba(102, 152, 134, 0.5)', // สีเข้มขึ้น
+    borderColor: '#115566',
+    borderWidth: 1,
+  },
   switchLabel: {
-  color: 'gray',
-  fontSize: 14,
-  textDecorationLine: 'underline',
-  textAlign: 'right', // ชิดขวา
-  marginTop: 0,
-  marginBottom: 20,
-  width: '100%', // กินพื้นที่เต็ม input
-},
+    color: 'gray',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+    textAlign: 'right', // ชิดขวา
+    marginTop: 0,
+    marginBottom: 20,
+    width: '100%', // กินพื้นที่เต็ม input
+  },
 
   bottomButtons: {
     alignItems: 'center',
@@ -90,4 +104,12 @@ export const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
+  
+  // ⭐️ NEW: Loading indicator
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+  }
 });

@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  Platform, // ⭐️ ย้าย Platform มาอยู่ด้านบน
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
@@ -16,7 +17,8 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 // Auth
 import { AuthProvider, useAuth } from "./hooks/context/AuthContext";
-import useShelfBooks from "./hooks/useShelfBooks";
+// ⭐️ ใช้ Hook ดึง Shelf Data
+import useShelfBooks from "./hooks/useShelfBooks"; 
 
 // Screens
 import LibraryScreenStack from "./screens/LibraryScreen";
@@ -108,24 +110,28 @@ function AppRoot() {
 /* ---------------- APP CONTENT (Auth Switch) ---------------- */
 function AppContent() {
   const { userID, userToken, logout } = useAuth();
-  const { shelfBooks, isLoading, refreshBooks } = useShelfBooks(
-    userID,
-    userToken,
-    true
-  );
-  const userProfile = { photoURL: undefined };
+  
+  // ⭐️ ใช้ Hook ดึงเฉพาะหนังสือที่ถูกยืม (Shelf Data)
+  const { shelfBooks, isLoading, fetchBooks } = useShelfBooks();
+  
+  // ⭐️ Profile สำหรับแสดงผล
+  const userProfile = { 
+      photoURL: "https://placehold.co/100x100/386156/FFFFFF?text=User", 
+      userId: userID
+  };
 
   const [drawerVisible, setDrawerVisible] = useState(false);
   const toggleDrawer = () => setDrawerVisible((p) => !p);
   const closeDrawer = () => setDrawerVisible(false);
 
-  /* ----- Custom Tab Bar (unchanged structure) ----- */
+  /* ----- Custom Tab Bar ----- */
   const CustomTabBar = ({
     state,
     descriptors,
     navigation,
   }: BottomTabBarProps) => {
-    const { toggleDrawer } = useDrawer();
+    // ต้องเรียก useDrawer() ภายใน component ที่ถูก render
+    const { toggleDrawer } = useDrawer(); 
 
     return (
       <View
@@ -227,11 +233,17 @@ function AppContent() {
                 ),
               }}
             >
+              {/* LibraryScreenStack ควรดึง Catalog เอง */}
               {() => (
                 <LibraryScreenStack
                   userId={userID}
-                  shelfBooks={shelfBooks}
                   userProfile={userProfile}
+                  
+                  // 🎯 FIX 1: ส่ง shelfBooks เข้าไปตามที่ LibraryScreenStack คาดหวัง
+                  shelfBooks={shelfBooks} 
+                  
+                  // 🎯 FIX 2: ส่ง refreshShelf (ซึ่งคือ fetchBooks) เข้าไป
+                  refreshShelf={fetchBooks}
                 />
               )}
             </Tab.Screen>
@@ -248,13 +260,13 @@ function AppContent() {
                 ),
               }}
             >
+              {/* ส่ง Shelf Data ไปที่ ShelfScreen */}
               {() => (
                 <ShelfScreen
                   userProfile={userProfile}
                   shelfBooks={shelfBooks}
                   isLoading={isLoading}
-                  userToken={userToken}
-                  onRefresh={refreshBooks}
+                  onRefresh={fetchBooks}
                 />
               )}
             </Tab.Screen>

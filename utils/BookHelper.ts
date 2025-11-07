@@ -1,31 +1,52 @@
 /**
- * ตรวจสอบว่าหนังสือสามารถยืมต่อได้หรือไม่
- * (Logic ตรงกับ API: ต้องมีสถานะ 'borrowed' หรือ 'renewed', 
- * ยังไม่เคยยืมต่อ, และเหลือเวลาน้อยกว่า 3 วัน)
+ * แปลงข้อมูลหนังสือที่ยืมมา (จาก API) ให้เป็นรูปแบบที่ Component ใช้งานง่าย
+ * และแปลง Date String ให้เป็น Date Object
+ * @param {object} item - ข้อมูลหนังสือที่ยืมมาจาก GET /api/borrows/current
+ * @returns {object} ข้อมูลหนังสือที่ normalize แล้ว
  */
-export const canExtend = (book: any) => {
-  const isActiveBorrow = ['borrowed', 'renewed'].includes(book.status);
-  if (!isActiveBorrow) return false;
+export const normalizeBookData = (item : any) => {
+    // ⭐️ ใช้ item.id หรือ item.book_id เป็น ID หลัก
+    const id = item.id || item.book_id; 
 
-  const dueDate = new Date(book.due_date || book.dueDate);
-  const daysLeft = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-  
-  // API logic: renewed_count ต้องเป็น 0 และ daysLeft <= 3 (และไม่ติดลบ)
-  return (book.renewed_count === 0) && (daysLeft <= 3) && (daysLeft >= 0);
+    return {
+        // IDs
+        id: id,
+        borrowId: item.borrow_id, // ID ของ Record ในตาราง Borrows
+
+        // Core Book Data
+        title: item.title,
+        author: item.author,
+        cover: item.cover,
+        
+        // Borrow Status/Dates
+        status: item.status, // borrowed, renewed, overdue, returned
+        renewCount: item.renew_count || 0,
+        
+        // ⭐️ แปลง String เป็น Date Object (สำคัญสำหรับ Frontend Logic)
+        borrowDate: item.borrow_date ? new Date(item.borrow_date) : null,
+        dueDate: item.due_date ? new Date(item.due_date) : null,
+        returnDate: item.return_date ? new Date(item.return_date) : null,
+    };
 };
 
 /**
- * จัดการข้อมูลหนังสือที่อาจมาจากหลายแหล่ง (เช่น title vs book_title)
+ * ตรวจสอบว่าสามารถยืมต่อหนังสือได้หรือไม่
+ * เงื่อนไข: 1. ต้องยังไม่เคยยืมต่อ (renew_count = 0) 2. เหลือเวลา 3 วัน หรือเกินกำหนด
+ * @param {object} book - ข้อมูลหนังสือที่ normalize แล้ว
+ * @returns {boolean}
  */
-export const normalizeBookData = (item: any) => {
-  return {
-    id: item.id ?? item.book_id,
-    title: item.title ?? item.book_title ?? 'ไม่มีชื่อเรื่อง',
-    author: item.author ?? item.book_author ?? 'ไม่ทราบผู้แต่ง',
-    cover: item.cover,
-    borrowDate: new Date(item.borrow_date ?? item.borrowDate),
-    dueDate: new Date(item.due_date ?? item.dueDate),
-    status: item.status,
-    renewed_count: item.renewed_count,
-  };
+export const canExtend = (book : any) => {
+    // ต้องมี due_date และ status ต้องเป็น active borrow
+    if (!book.dueDate || book.status === 'returned') return false; 
+    
+    // 1. ตรวจสอบว่าเคยยืมต่อแล้วหรือไม่
+    if (book.status === 'renewed' || book.renewCount > 0) return false;
+
+    const dueDate = book.dueDate;
+    const now = new Date();
+    // Math.ceil เพื่อให้ได้จำนวนวันเต็ม (สำคัญมากในการคำนวณวันคงเหลือ)
+    const daysLeft = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    // 2. เงื่อนไขการยืมต่อ: เหลือ 3 วัน หรือ เกินกำหนด (daysLeft < 0)
+    return daysLeft <= 3;
 };

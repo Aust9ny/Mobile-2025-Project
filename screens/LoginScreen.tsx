@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { View, TextInput, Button, Text, ActivityIndicator } from "react-native";
 import { useAuth } from "../hooks/context/AuthContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/context/AuthContext";
-// ❗️ ลบ import ที่ไม่ได้ใช้ (auth, updateProfile) เพราะ Context จะจัดการเอง
-// import { updateProfile } from "firebase/auth";
-// import { auth } from "../services/firebase";
-import styles from "../styles/LoginScreenStyle";
+import {styles} from "../styles/LoginScreenStyle";
 import {
   View,
   Text,
@@ -13,54 +10,67 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert, // 👈 เพิ่ม Alert
+  Alert,
 } from "react-native";
+// ⭐️ IMPORT: นำเข้า navigation hook เพื่อการนำทางที่ชัดเจน
+import { useNavigation } from "@react-navigation/native"; 
 
-export default function RegisterScreen({ navigation }: any) {
-  const { register } = useAuth(); // 👈 เราจะใช้ register จาก Context
+
+export default function RegisterScreen() { // ❌ ลบ { navigation } ออกและใช้ useNavigation
+  const { register } = useAuth(); 
+  const navigation = useNavigation<any>(); // ⭐️ ใช้ useNavigation
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  // ⭐️ 1. เพิ่ม State สำหรับ SID (Student ID)
+  const [sid, setSid] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [confirm, setConfirm] = useState(""); 
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onRegister = async () => {
+    // 1. ตรวจสอบเงื่อนไข
     if (password !== confirm) {
       return setErrorMsg("รหัสผ่านไม่ตรงกัน");
     }
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-      return setErrorMsg("กรุณากรอกข้อมูล (ชื่อ, นามสกุล, อีเมล) ให้ครบถ้วน");
+    const requiredFields = [firstName, lastName, email, sid, password, confirm];
+    if (requiredFields.some(field => !field.trim())) {
+      return setErrorMsg("กรุณากรอกข้อมูลให้ครบถ้วน");
     }
 
     setLoading(true);
-    setErrorMsg(""); // เคลียร์ error เก่า
+    setErrorMsg(""); 
 
     try {
-      // 1. ⭐️ เตรียมข้อมูลผู้ใช้ที่จะส่งไป
+      // 2. เตรียมข้อมูลผู้ใช้ที่จะส่งไป
       const userData = {
         email: email.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        sid: sid.trim(), 
       };
       
-      // 2. ⭐️ เรียก register จาก Context (ซึ่งจะ sync ข้อมูลไป MySQL ด้วย)
-      const ok = await register(userData, password.trim());
+      // 3. เรียก register จาก Context (จะทำการส่ง Email Link/OTP และสร้างบัญชี Local)
+      const result = await register(userData, password.trim());
       
-      if (!ok) {
-        throw new Error("สมัครสมาชิกไม่สำเร็จ (Context error)");
+      if (!result) {
+        throw new Error("การลงทะเบียนไม่สมบูรณ์");
       }
-
-      // 3. ⭐️ ไม่ต้องทำอะไรต่อ! (ไม่ต้อง navigate("Login"))
-      // เพราะเมื่อ AuthProvider มี user, 
-      // AppRoot.tsx จะสลับหน้าไปที่ AppContent (หน้าหลัก) ให้อัตโนมัติ
+      
+      // 4. 🎯 นำทางไปยังหน้าจอแจ้งเตือนการยืนยันตัวตน
+      Alert.alert(
+        "ลงทะเบียนสำเร็จ", 
+        "กรุณาตรวจสอบอีเมลของคุณเพื่อยืนยันบัญชีและเริ่มใช้งาน"
+      );
+      
+      // ⭐️ นำทางไปหน้า Login หรือหน้า Waiting (ที่ควรสร้าง)
+      navigation.navigate('Login'); 
 
     } catch (e: any) {
-      // ⭐️ ใช้ Alert แทน setErrorMsg (เพราะ e.message จาก Firebase/API ชัดเจนกว่า)
+      // ⭐️ แจ้ง Error จาก Firebase/API
       Alert.alert("สมัครสมาชิกล้มเหลว", e?.message || "สมัครสมาชิกไม่สำเร็จ");
-      // setErrorMsg(e?.message || "สมัครสมาชิกไม่สำเร็จ");
     }
     setLoading(false);
   };
@@ -70,12 +80,23 @@ export default function RegisterScreen({ navigation }: any) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
-      <ScrollView>
+      <ScrollView contentContainerStyle={{paddingVertical: 40}}>
         <Text style={styles.title}>สมัครสมาชิก</Text>
 
+        {/* ⭐️ ช่อง SID */}
         <TextInput
           style={styles.input}
-          placeholder="ชื่อ"
+          placeholder="รหัสนิสิต (SID)"
+          value={sid}
+          onChangeText={setSid}
+          autoCapitalize="none"
+          keyboardType="number-pad"
+          maxLength={10} // สมมติว่ารหัสนิสิตมี 10 หลัก
+        />
+        
+        <TextInput
+          style={styles.input}
+          placeholder="ชื่อจริง"
           value={firstName}
           onChangeText={setFirstName}
         />
@@ -91,6 +112,7 @@ export default function RegisterScreen({ navigation }: any) {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          keyboardType="email-address"
         />
         <TextInput
           style={styles.input}

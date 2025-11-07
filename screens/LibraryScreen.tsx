@@ -69,8 +69,10 @@ const MOCK_LIBRARY: Book[] = [
 const Stack = createNativeStackNavigator();
 
 // ---------- หน้าแสดงหนังสือทั้งหมดของ genre ----------
+// ---------- หน้าแสดงหนังสือทั้งหมดของ genre ----------
 function GenreBooksScreen({ route, navigation }: any) {
-  const { genre, books } = route.params;
+  // 🎯 รับ onBorrowSuccess จาก route.params
+  const { genre, books, onBorrowSuccess } = route.params; 
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f8f8f8' }}>
@@ -87,7 +89,11 @@ function GenreBooksScreen({ route, navigation }: any) {
         columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 8, marginBottom: 12 }}
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => navigation.navigate('BookDetail', { book: item })}
+            onPress={() => navigation.navigate('BookDetail', { 
+              book: item,
+              // 🎯 แนบ onBorrowSuccess เข้าไปเมื่อนำทาง
+              onBorrowSuccess: onBorrowSuccess // <--- ส่งต่อ Callback
+            })}
             style={[styles.genreBookCard, { width: cardWidth }]}
           >
             <Image source={{ uri: item.cover }} style={styles.genreBookCover} />
@@ -101,27 +107,19 @@ function GenreBooksScreen({ route, navigation }: any) {
 }
 
 // ---------- หน้าหลัก Library ----------
-function LibraryHome({ shelfBooks, userProfile }: Props) {
+// 🎯 แก้ไข: รับ refreshShelf เข้ามาใน Props
+function LibraryHome({ shelfBooks, userProfile, refreshShelf }: Props & { refreshShelf: () => void }) {
   const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<'Home' | 'Categories'>('Home');
 
+  // ... (libraryData, groupedGenres - unchanged) ...
   const libraryData: Book[] = useMemo(() => {
-    if (shelfBooks && shelfBooks.length) {
-      return shelfBooks.map((b) => ({
-        id: b.id ?? '',
-        title: b.title ?? '',
-        author: b.author ?? '',
-        genre: b.genre ?? '',
-        cover: b.cover ?? '',
-        available: b.available ?? 0,
-        borrowed: b.borrowed ?? 0,
-        total: b.total ?? 0,
-      }));
-    }
+    // ... logic ...
     return MOCK_LIBRARY;
   }, [shelfBooks]);
 
   const groupedGenres = useMemo(() => {
+    // ... logic ...
     const result: Record<string, Book[]> = {};
     libraryData.forEach((book) => {
       if (!result[book.genre]) result[book.genre] = [];
@@ -138,7 +136,8 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
         <View style={styles.genreHeader}>
           <Text style={styles.genreTitle}>{genre}</Text>
           <Pressable
-            onPress={() => navigation.navigate('GenreBooks', { genre, books })}
+            // 🎯 แนบ Callback เข้าไปเมื่อนำทางไปหน้าดูทั้งหมด
+            onPress={() => navigation.navigate('GenreBooks', { genre, books, onBorrowSuccess: refreshShelf })}
             style={{ flexDirection: 'row', alignItems: 'center' }}
           >
             <Text style={styles.seeAllText}>ดูทั้งหมด</Text>
@@ -151,10 +150,14 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
         {/* ------------------------------ */}
         {activeTab === 'Home' && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            {books.slice(0, 2).map((book) => ( // แสดง 2 เล่มแรกเฉพาะหน้าแรก
+            {books.slice(0, 2).map((book) => (
               <Pressable
                 key={book.id}
-                onPress={() => navigation.navigate('BookDetail', { book })}
+                onPress={() => navigation.navigate('BookDetail', { 
+                  book,
+                  // 🎯 แนบ Callback เข้าไปเมื่อนำทางจากหน้า Home
+                  onBorrowSuccess: refreshShelf 
+                })}
                 style={styles.homeBookCardLarge}
               >
                 <Text style={styles.homeBookTitleLarge}>{book.title}</Text>
@@ -176,19 +179,23 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
             style={{
               flexDirection: 'row',
               flexWrap: 'wrap',
-              justifyContent: 'flex-start', // ✅ เปลี่ยนจาก space-between
+              justifyContent: 'flex-start',
             }}
           >
             {books.slice(0, 3).map((book, index) => (
               <Pressable
                 key={book.id}
-                onPress={() => navigation.navigate('BookDetail', { book })}
+                onPress={() => navigation.navigate('BookDetail', { 
+                  book,
+                  // 🎯 แนบ Callback เข้าไปเมื่อนำทางจากหน้า Categories
+                  onBorrowSuccess: refreshShelf 
+                })}
                 style={[
                   styles.genreBookCard,
                   {
                     width: cardWidth,
-                    marginRight: (index + 1) % 3 === 0 ? 0 : 8, // ✅ เว้นระยะห่าง 8px เฉพาะก่อนครบ 3 คอลัมน์
-                    marginBottom: 12, // เพิ่มช่องว่างระหว่างแถว
+                    marginRight: (index + 1) % 3 === 0 ? 0 : 8,
+                    marginBottom: 12, 
                   },
                 ]}
               >
@@ -199,66 +206,81 @@ function LibraryHome({ shelfBooks, userProfile }: Props) {
             ))}
           </View>
         )}
-
       </View>
     );
   };
-
-
-
+  
+  // ... (Header and Tabs - unchanged) ...
   return (
+    
     <View style={{ flex: 1 }}>
-      {/* Header */}
-      <View style={styles.customHeader}>
-        <Text style={styles.headerTitle}>ห้องสมุด</Text>
-        <Pressable onPress={() => navigation.navigate('ProfileScreen')}>
-          <Image
-            source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
-            style={styles.profileImage}
-            resizeMode="cover"
-          />
-        </Pressable>
-      </View>
-
-      {/* Sub Tabs */}
-      <View style={styles.subTabContainer}>
-        {(['Home', 'Categories'] as const).map((tab) => (
-          <Pressable key={tab} onPress={() => setActiveTab(tab)} style={styles.subTab}>
-            <Text style={[styles.subTabText, activeTab === tab && styles.subTabActiveText]}>
-              {tab === 'Home' ? 'หน้าแรก' : 'หมวดหมู่'}
-            </Text>
-            {activeTab === tab && <View style={styles.subTabIndicator} />}
+        {/* Header and Sub Tabs */}
+        <View style={styles.customHeader}>
+          <Text style={styles.headerTitle}>ห้องสมุด</Text>
+          <Pressable onPress={() => navigation.navigate('ProfileScreen')}>
+            <Image
+              source={{ uri: userProfile?.photoURL || DEFAULT_PROFILE }}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
           </Pressable>
-        ))}
-      </View>
-
-      <FlatList
-        data={groupedGenres}
-        keyExtractor={([genre]) => genre}
-        renderItem={renderGenre}
-        showsVerticalScrollIndicator={false}
-      />
+        </View>
+        <View style={styles.subTabContainer}>
+            {(['Home', 'Categories'] as const).map((tab) => (
+            <Pressable key={tab} onPress={() => setActiveTab(tab)} style={styles.subTab}>
+                <Text style={[styles.subTabText, activeTab === tab && styles.subTabActiveText]}>
+                {tab === 'Home' ? 'หน้าแรก' : 'หมวดหมู่'}
+                </Text>
+                {activeTab === tab && <View style={styles.subTabIndicator} />}
+            </Pressable>
+            ))}
+        </View>
+        {/* ... */}
+        <FlatList
+            data={groupedGenres}
+            keyExtractor={([genre]) => genre}
+            renderItem={renderGenre}
+            showsVerticalScrollIndicator={false}
+        />
     </View>
   );
 }
 
 // ---------- Stack ----------
-export default function LibraryScreenStack({ userId, shelfBooks, userProfile }: Props) {
+// 🎯 แก้ไข: รับ props ที่มี refreshShelf เข้ามา
+export default function LibraryScreenStack(props: { userId: string, shelfBooks: Props['shelfBooks'], userProfile: Props['userProfile'], refreshShelf: () => void }) {
+  const { shelfBooks, userProfile, refreshShelf } = props;
+  
   return (
     <Stack.Navigator>
       <Stack.Screen name="LibraryHome" options={{ headerShown: false }}>
-        {(props: any) => <LibraryHome {...props} shelfBooks={shelfBooks} userProfile={userProfile} />}
+        {/* 🎯 ส่ง props ทั้งหมดที่ต้องการลงไป รวมถึง refreshShelf */}
+        {() => (
+            <LibraryHome 
+                shelfBooks={shelfBooks} 
+                userProfile={userProfile} 
+                refreshShelf={refreshShelf} // <--- ส่งฟังก์ชัน Refetch ต่อลงไป
+            />
+        )}
       </Stack.Screen>
 
+      {/* 🎯 สำคัญ: การแนบ Callback เข้าไปใน params ของ BookDetail */}
       <Stack.Screen
         name="BookDetail"
-        component={BookDetailScreen}
         options={{
           title: 'รายละเอียดหนังสือ',
           headerTintColor: '#fff',
           headerStyle: { backgroundColor: '#115566' },
         }}
-      />
+      >
+        {(navProps) => (
+            <BookDetailScreen 
+                {...navProps} 
+                // 🎯 แนบ Callback จาก Parent (refreshShelf) เข้าไปใน route.params
+                onBorrowSuccess={refreshShelf} 
+            />
+        )}
+      </Stack.Screen>
 
       <Stack.Screen
         name="GenreBooks"

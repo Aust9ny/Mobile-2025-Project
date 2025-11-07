@@ -77,6 +77,13 @@ export default StyleSheet.create({
         marginTop: 4,
     },
 
+    statNumberRed: {
+        fontSize: 18,
+        fontWeight: '700',
+        marginTop: 4,
+        color: "red",
+    },
+
     available: {
         color: '#115566',
     },
@@ -136,3 +143,4 @@ export default StyleSheet.create({
         marginBottom: 24,
     },
 });
+

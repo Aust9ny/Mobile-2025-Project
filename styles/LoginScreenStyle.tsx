@@ -1,129 +1,92 @@
-// styles/LoginScreenStyle.tsx
-import { StyleSheet } from "react-native";
+import { StyleSheet } from 'react-native';
 
-const styles = StyleSheet.create({
-  // --- Container ---
+// Color Palette
+const COLORS = {
+  primary: '#115566',    // Dark Teal
+  secondary: '#386156',   // Medium Dark Green
+  accent: '#B0BA1D',     // Lime Green
+  background: '#F8FCF8', // Off-white
+  textDark: '#1E1E1E',   // Almost Black
+  textLight: '#FFFFFF',   // White
+  placeholder: '#669886', // Medium Light Green
+  border: '#D9D9D9',     // Gray
+};
+
+export const styles = StyleSheet.create({
+  // --- Main Layout ---
   container: {
     flex: 1,
-    backgroundColor: "#F7F7F0",
+    backgroundColor: COLORS.background, // 👈 Off-white BG
   },
-  headerContainer: {
-    height: 400,
-    backgroundColor: "#0A4851",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
+  // Fixed Header
+  header: {
+    backgroundColor: COLORS.primary, // 👈 Dark Teal
+    paddingTop: 60, // (เพิ่ม padding ด้านบนให้สูงขึ้น)
+    paddingBottom: 40,
+    paddingHorizontal: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  logo: {
-    width: 120,
-    height: 120,
-    resizeMode: "contain",
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.accent, // 👈 Lime Green
   },
-  formContainer: {
+  
+  // Scrolling Content Area
+  scrollView: {
     flex: 1,
-    alignItems: "center",
+  },
+  contentContainer: {
+    paddingHorizontal: 30,
     paddingTop: 40,
-    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
 
-  // --- Text styles ---
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0A4851",
-    marginBottom: 30,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#333",
-    textAlign: "center",
-  },
-  buttonText: {
-    color: "#FFF",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  errorText: {
-    color: "red",
-    marginBottom: 10,
-  },
-  otpInfo: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  linkButtonText:{
-    color: "#0A4851",
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  registerHeaderText:{
-    fontSize: 28,
-    fontWeight:"bold",
-    color:"#fefef2",
-
-  },
-
-  // --- Input ---
+  // --- Form Elements ---
   input: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#E8E8E8",
-    borderRadius: 25,
+    backgroundColor: COLORS.textLight, // 👈 White
+    borderWidth: 1,
+    borderColor: COLORS.border, // 👈 Gray
+    borderRadius: 8,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     fontSize: 16,
-    marginBottom: 20,
+    color: COLORS.textDark, // 👈 Almost Black
+    marginBottom: 15,
+  },
+  errorText: {
+    color: '#D90429', // (Red)
+    textAlign: 'center',
+    marginBottom: 10,
   },
 
-  // --- Button ---
+  // --- Buttons (ตามคำขอ) ---
+  
+  // ⭐️ 1. Main Button (สำหรับ Login/Register)
   button: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#0A4851",
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: COLORS.primary, // 👈 Dark Teal
+    borderRadius: 8,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 10,
+    marginBottom: 10,
   },
-  buttonDisabled: {
-    backgroundColor: "#A9C6CB",
-  },
-  resendButton: {
-    marginTop: 10,
+  buttonText: {
+    color: COLORS.textLight, // 👈 White
+    fontSize: 16,
+    fontWeight: '700',
   },
 
-  // --- OTP ---
-  otpContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 20,
+  // ⭐️ 2. Text Button (สำหรับ "สลับหน้า" หรือ "ลืมรหัส")
+  textButton: {
+    paddingVertical: 10,
+    alignItems: 'center',
   },
-  otpInput: {
-    width: 45,
-    height: 55,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    backgroundColor: "#F0F0F0",
-    borderRadius: 10,
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#0A4851",
+  textButtonText: {
+    color: COLORS.secondary, // 👈 Medium Dark Green
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
-  // ---ScrollView---
-  scrollView:{
-    flex:1,
-    width:"100%",
-    padding:10,
-    
-  }
 });
-
-export default styles;
